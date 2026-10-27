@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TabOS Core</title>
+  <title>TabOS - Smart Home Edition</title>
   
   <!-- PWA Metadata -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -19,9 +19,11 @@
       --card-border: rgba(255, 255, 255, 0.1);
       --taskbar-bg: rgba(15, 23, 42, 0.85);
       --accent-color: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.3);
       --text-color: #f8fafc;
       --text-muted: #94a3b8;
       --danger-color: #ef4444;
+      --success-color: #22c55e;
       --window-header-bg: rgba(30, 41, 59, 0.95);
       --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
@@ -61,7 +63,7 @@
       grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
       gap: 20px;
       padding: 24px;
-      max-width: 600px;
+      max-width: 700px;
     }
 
     .desktop-icon {
@@ -107,8 +109,8 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      min-width: 300px;
-      min-height: 200px;
+      min-width: 320px;
+      min-height: 240px;
       transition: transform 0.15s ease, opacity 0.15s ease;
     }
 
@@ -122,7 +124,7 @@
       top: 0 !important;
       left: 0 !important;
       width: 100% !important;
-      height: 100% !important;
+      height: calc(100% - 54px) !important;
       border-radius: 0;
     }
 
@@ -304,6 +306,85 @@
     .start-item:hover, .start-item:active {
       background: rgba(255, 255, 255, 0.08);
     }
+
+    /* ===================================================
+       SMART HOME STYLES (Tegels & Kamers)
+       =================================================== */
+    .smarthome-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      height: 100%;
+    }
+
+    .room-tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .room-tab {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .room-tab.active {
+      background: var(--accent-color);
+      color: #0f172a;
+      border-color: var(--accent-color);
+    }
+
+    .tiles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .device-tile {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 110px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .device-tile.on {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: var(--accent-color);
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    .device-tile .tile-icon {
+      font-size: 24px;
+    }
+
+    .device-tile .tile-info .tile-name {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .device-tile .tile-info .tile-state {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .device-tile.on .tile-state {
+      color: var(--accent-color);
+    }
   </style>
 </head>
 <body>
@@ -348,15 +429,12 @@
       windows: {},
       activeZIndex: 100,
 
-      // App Registratie Methode
       registerApp(id, config) {
-        // config = { title, icon, width, height, render: function(container) {} }
         this.apps[id] = config;
         this.renderDesktopIcons();
         this.renderStartMenuItems();
       },
 
-      // Open een app in een nieuw of bestaand venster
       openApp(id) {
         if (this.windows[id]) {
           this.focusWindow(id);
@@ -369,10 +447,9 @@
 
         const winEl = document.createElement('div');
         winEl.className = 'window';
-        winEl.style.width = app.width || '500px';
-        winEl.style.height = app.height || '400px';
+        winEl.style.width = app.width || '520px';
+        winEl.style.height = app.height || '420px';
         
-        // Standaard centreren
         const top = Math.max(20, (window.innerHeight - 54 - parseInt(winEl.style.height)) / 2);
         const left = Math.max(20, (window.innerWidth - parseInt(winEl.style.width)) / 2);
         winEl.style.top = top + 'px';
@@ -395,26 +472,17 @@
 
         document.getElementById('desktop').appendChild(winEl);
 
-        const winData = {
-          id: id,
-          element: winEl,
-          isMaximized: false
-        };
-
+        const winData = { id: id, element: winEl, isMaximized: false };
         this.windows[id] = winData;
 
-        // Vul venster content via app render-functie
         const bodyEl = winEl.querySelector('.window-body');
         if (typeof app.render === 'function') {
           app.render(bodyEl);
         }
 
-        // Window Events
         this.setupWindowEvents(winData);
         this.focusWindow(id);
         this.updateTaskbar();
-        
-        // Sluit startmenu als het open is
         document.getElementById('start-menu').classList.remove('open');
       },
 
@@ -444,4 +512,286 @@
         const win = this.windows[id];
         if (!win) return;
         win.isMaximized = !win.isMaximized;
-        win.element.classList.toggle('maximized', win.isMax
+        win.element.classList.toggle('maximized', win.isMaximized);
+      },
+
+      setupWindowEvents(winData) {
+        const el = winData.element;
+        const header = el.querySelector('.window-header');
+
+        el.addEventListener('pointerdown', () => this.focusWindow(winData.id));
+
+        header.querySelector('.min').onclick = (e) => { e.stopPropagation(); this.toggleMinimize(winData.id); };
+        header.querySelector('.max').onclick = (e) => { e.stopPropagation(); this.toggleMaximize(winData.id); };
+        header.querySelector('.close').onclick = (e) => { e.stopPropagation(); this.closeWindow(winData.id); };
+
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
+
+        const onPointerDown = (e) => {
+          if (winData.isMaximized) return;
+          isDragging = true;
+          startX = e.clientX || e.touches?.[0].clientX;
+          startY = e.clientY || e.touches?.[0].clientY;
+          initialLeft = el.offsetLeft;
+          initialTop = el.offsetTop;
+          
+          document.addEventListener('pointermove', onPointerMove);
+          document.addEventListener('pointerup', onPointerUp);
+        };
+
+        const onPointerMove = (e) => {
+          if (!isDragging) return;
+          const currentX = e.clientX || e.touches?.[0].clientX;
+          const currentY = e.clientY || e.touches?.[0].clientY;
+          el.style.left = (initialLeft + (currentX - startX)) + 'px';
+          el.style.top = (initialTop + (currentY - startY)) + 'px';
+        };
+
+        const onPointerUp = () => {
+          isDragging = false;
+          document.removeEventListener('pointermove', onPointerMove);
+          document.removeEventListener('pointerup', onPointerUp);
+        };
+
+        header.addEventListener('pointerdown', onPointerDown);
+      },
+
+      renderDesktopIcons() {
+        const grid = document.getElementById('desktop-grid');
+        grid.innerHTML = '';
+        Object.keys(this.apps).forEach(id => {
+          const app = this.apps[id];
+          const iconEl = document.createElement('div');
+          iconEl.className = 'desktop-icon';
+          iconEl.innerHTML = `<div class="icon">${app.icon}</div><div class="label">${app.title}</div>`;
+          iconEl.onclick = () => this.openApp(id);
+          grid.appendChild(iconEl);
+        });
+      },
+
+      renderStartMenuItems() {
+        const list = document.getElementById('start-list');
+        list.innerHTML = '';
+        Object.keys(this.apps).forEach(id => {
+          const app = this.apps[id];
+          const itemEl = document.createElement('div');
+          itemEl.className = 'start-item';
+          itemEl.innerHTML = `<span style="font-size: 20px;">${app.icon}</span><span>${app.title}</span>`;
+          itemEl.onclick = () => this.openApp(id);
+          list.appendChild(itemEl);
+        });
+      },
+
+      updateTaskbar() {
+        const container = document.getElementById('taskbar-apps');
+        container.innerHTML = '';
+        Object.keys(this.windows).forEach(id => {
+          const win = this.windows[id];
+          const app = this.apps[id];
+          const item = document.createElement('div');
+          item.className = 'taskbar-item' + (parseInt(win.element.style.zIndex) === this.activeZIndex ? ' active' : '');
+          item.innerHTML = `<span>${app.icon}</span><span>${app.title}</span>`;
+          item.onclick = () => {
+            if (win.element.classList.contains('minimized')) {
+              win.element.classList.remove('minimized');
+              this.focusWindow(id);
+            } else if (parseInt(win.element.style.zIndex) === this.activeZIndex) {
+              this.toggleMinimize(id);
+            } else {
+              this.focusWindow(id);
+            }
+          };
+          container.appendChild(item);
+        });
+      }
+    };
+
+    /* ===================================================
+       SYSTEEMSTATUS & UTILITIES
+       =================================================== */
+    function updateClock() {
+      const d = new Date();
+      document.getElementById('sys-clock').innerText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    if ('getBattery' in navigator) {
+      navigator.getBattery().then(battery => {
+        const updateBat = () => {
+          const level = Math.round(battery.level * 100);
+          document.getElementById('sys-battery').innerText = `${battery.charging ? '⚡' : '🔋'} ${level}%`;
+        };
+        updateBat();
+        battery.addEventListener('levelchange', updateBat);
+        battery.addEventListener('chargingchange', updateBat);
+      });
+    }
+
+    function updateOnlineStatus() {
+      document.getElementById('sys-wifi').innerText = navigator.onLine ? '🌐' : '📡❌';
+    }
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    updateOnlineStatus();
+
+    document.getElementById('start-btn').onclick = (e) => {
+      e.stopPropagation();
+      document.getElementById('start-menu').classList.toggle('open');
+    };
+    document.addEventListener('click', () => {
+      document.getElementById('start-menu').classList.remove('open');
+    });
+
+    document.getElementById('sys-fullscreen').onclick = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
+
+    /* ===================================================
+       APP 1: SMARTHOME KAMER BEDIENING (Tegels)
+       =================================================== */
+    TabOS.registerApp('smarthome', {
+      title: 'Smart Home',
+      icon: '🏠',
+      width: '650px',
+      height: '480px',
+      render: function(container) {
+        // Mock data van je kamers en apparaten
+        const rooms = {
+          "1 Woning": [
+            { id: 'l1', name: 'Hal lamp', type: 'light', icon: '💡', on: false },
+            { id: 'l2', name: 'Eetkamer 1', type: 'light', icon: '💡', on: true },
+            { id: 'l3', name: 'Woonkamer TV', type: 'tv', icon: '📺', on: false },
+            { id: 'ac1', name: 'Portable AC', type: 'ac', icon: '❄️', on: false, temp: '21°C' },
+            { id: 'th1', name: 'Thermostaat', type: 'thermostat', icon: '🌡️', on: true, temp: '20.5°C' },
+            { id: 'sp1', name: 'Speaker Kamer', type: 'speaker', icon: '🔊', on: false }
+          ],
+          "Keuken": [
+            { id: 'l4', name: 'Keuken lamp', type: 'light', icon: '💡', on: true },
+            { id: 'sp2', name: 'Keuken Speaker', type: 'speaker', icon: '🔊', on: false }
+          ],
+          "Buiten": [
+            { id: 'l5', name: 'Terras', type: 'light', icon: '💡', on: false },
+            { id: 'l6', name: 'Voordeur lamp', type: 'light', icon: '💡', on: false },
+            { id: 'l7', name: 'Garage lamp', type: 'light', icon: '💡', on: false }
+          ]
+        };
+
+        let currentRoom = Object.keys(rooms)[0];
+
+        function renderContent() {
+          container.innerHTML = `
+            <div class="smarthome-container">
+              <div class="room-tabs" id="room-tabs-container"></div>
+              <div class="tiles-grid" id="tiles-grid-container"></div>
+            </div>
+          `;
+
+          // Render kamer tabbladen
+          const tabsContainer = container.querySelector('#room-tabs-container');
+          Object.keys(rooms).forEach(roomName => {
+            const tab = document.createElement('div');
+            tab.className = 'room-tab' + (roomName === currentRoom ? ' active' : '');
+            tab.innerText = roomName;
+            tab.onclick = () => {
+              currentRoom = roomName;
+              renderContent();
+            };
+            tabsContainer.appendChild(tab);
+          });
+
+          // Render tegels voor geselecteerde kamer
+          const gridContainer = container.querySelector('#tiles-grid-container');
+          rooms[currentRoom].forEach(device => {
+            const tile = document.createElement('div');
+            tile.className = 'device-tile' + (device.on ? ' on' : '');
+            
+            let stateText = device.on ? 'Aan' : 'Uit';
+            if (device.temp) stateText = device.temp;
+
+            tile.innerHTML = `
+              <div class="tile-icon">${device.icon}</div>
+              <div class="tile-info">
+                <div class="tile-name">${device.name}</div>
+                <div class="tile-state">${stateText}</div>
+              </div>
+            `;
+
+            tile.onclick = () => {
+              device.on = !device.on;
+              renderContent();
+            };
+
+            gridContainer.appendChild(tile);
+          });
+        }
+
+        renderContent();
+      }
+    });
+
+    /* ===================================================
+       APP 2: 1-FILE APP INSTALLER (Upload/Installeer Apps)
+       =================================================== */
+    TabOS.registerApp('installer', {
+      title: 'App Installer',
+      icon: '📦',
+      width: '500px',
+      height: '380px',
+      render: function(container) {
+        container.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:16px; height:100%;">
+            <h3>Installeer 1-File App</h3>
+            <p style="font-size:13px; color:var(--text-muted);">Sleep hier een HTML-bestand of plak de code van je app om hem direct toe te voegen aan TabOS.</p>
+            
+            <textarea id="appCodeInput" placeholder="Plak hier je HTML/JS app code..." style="width:100%; flex:1; background:rgba(0,0,0,0.3); color:#fff; border:1px solid var(--card-border); border-radius:8px; padding:10px; font-family:monospace; font-size:12px; resize:none;"></textarea>
+            
+            <div style="display:flex; gap:10px;">
+              <input type="text" id="appNameInput" placeholder="App Naam" style="flex:1; background:rgba(0,0,0,0.3); color:#fff; border:1px solid var(--card-border); border-radius:8px; padding:8px 12px; font-size:13px;">
+              <button id="installBtn" style="background:var(--accent-color); color:#0f172a; border:none; padding:8px 20px; border-radius:8px; font-weight:700; cursor:pointer;">Installeer</button>
+            </div>
+          </div>
+        `;
+
+        container.querySelector('#installBtn').onclick = () => {
+          const code = container.querySelector('#appCodeInput').value;
+          const name = container.querySelector('#appNameInput').value || 'Eigen App';
+          
+          if (!code) {
+            alert('Voer eerst app-code in!');
+            return;
+          }
+
+          const appId = 'custom_' + Date.now();
+          
+          // Registreer dynamisch als nieuwe TabOS app
+          TabOS.registerApp(appId, {
+            title: name,
+            icon: '🧩',
+            width: '500px',
+            height: '400px',
+            render: function(appContainer) {
+              appContainer.innerHTML = code;
+              // Voer eventuele script tags uit die in de code stonden
+              const scripts = appContainer.querySelectorAll('script');
+              scripts.forEach(s => {
+                const newScript = document.createElement('script');
+                newScript.textContent = s.textContent;
+                document.body.appendChild(newScript);
+              });
+            }
+          });
+
+          alert(`App "${name}" is succesvol geïnstalleerd en toegevoegd aan je startmenu!`);
+        };
+      }
+    });
+
+  </script>
+</body>
+</html>
