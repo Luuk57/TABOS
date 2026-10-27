@@ -3,21 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TabOS - Calculator Edition</title>
+  <title>TabOS - Kiosk Edition</title>
   
-  <!-- PWA Metadata -->
+  <!-- PWA Fullscreen Kiosk Metadata -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#0f172a">
-  <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22TabOS%22,%22short_name%22:%22TabOS%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230f172a%22,%22theme_color%22:%22%230f172a%22}">
+  <meta name="theme-color" content="#090d16">
+  <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22TabOS%22,%22short_name%22:%22TabOS%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23090d16%22,%22theme_color%22:%22%23090d16%22}">
 
   <style>
     :root {
       --bg-color: #0f172a;
       --card-bg: rgba(30, 41, 59, 0.7);
       --card-border: rgba(255, 255, 255, 0.1);
-      --taskbar-bg: rgba(15, 23, 42, 0.85);
+      --taskbar-bg: rgba(15, 23, 42, 0.95);
+      --topbar-bg: rgba(15, 23, 42, 0.95);
       --accent-color: #38bdf8;
       --accent-glow: rgba(56, 189, 248, 0.3);
       --text-color: #f8fafc;
@@ -44,12 +45,49 @@
       font-family: var(--font-family);
       background: #090d16;
       color: var(--text-color);
+      position: fixed;
+      top: 0;
+      left: 0;
     }
 
-    /* Desktop Area */
-    #desktop {
+    /* 1. Bovenbalk van TabOS */
+    #topbar {
       position: absolute;
       top: 0;
+      left: 0;
+      right: 0;
+      height: 36px;
+      background: var(--topbar-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 99999;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--accent-color);
+      font-weight: 700;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    /* Desktop Area (Tussen bovenbalk en onderbalk) */
+    #desktop {
+      position: absolute;
+      top: 36px;
       left: 0;
       right: 0;
       bottom: 54px;
@@ -124,7 +162,7 @@
       top: 0 !important;
       left: 0 !important;
       width: 100% !important;
-      height: calc(100% - 54px) !important;
+      height: 100% !important;
       border-radius: 0;
     }
 
@@ -184,7 +222,7 @@
       -webkit-user-select: text;
     }
 
-    /* Taskbar */
+    /* 2. Onderbalk (Taakbalk) van TabOS */
     #taskbar {
       position: absolute;
       bottom: 0;
@@ -250,14 +288,18 @@
       border-color: var(--accent-color);
     }
 
-    .sys-tray {
+    .exit-kiosk-btn {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 12px;
-      font-size: 13px;
-      background: rgba(0, 0, 0, 0.2);
-      padding: 6px 12px;
-      border-radius: 20px;
+      gap: 6px;
     }
 
     /* Start Menu */
@@ -311,8 +353,8 @@
     #pin-modal {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(10px);
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(12px);
       display: none;
       align-items: center;
       justify-content: center;
@@ -325,7 +367,7 @@
       padding: 24px;
       border-radius: 16px;
       text-align: center;
-      width: 280px;
+      width: 300px;
       box-shadow: 0 20px 40px rgba(0,0,0,0.6);
     }
 
@@ -371,9 +413,7 @@
       color: #0f172a;
     }
 
-    /* ===================================================
-       CALCULATOR STYLES
-       =================================================== */
+    /* Calculator */
     .calculator {
       display: flex;
       flex-direction: column;
@@ -436,18 +476,32 @@
 </head>
 <body>
 
-  <!-- Desktop -->
+  <!-- 1. BOVENBALK (Statusbalk) -->
+  <div id="topbar">
+    <div class="topbar-left">
+      <span>🖥️ TabOS</span>
+      <span style="font-size:11px; opacity:0.6; font-weight:normal;">| Lenovo Edition</span>
+    </div>
+    <div class="topbar-right">
+      <span id="sys-wifi" title="Netwerk status">🌐 Online</span>
+      <span id="sys-battery" title="Accu status">🔋 100%</span>
+      <span id="sys-date" style="opacity:0.8;"></span>
+      <span id="sys-clock" style="font-weight:700; color:var(--accent-color);">00:00</span>
+    </div>
+  </div>
+
+  <!-- 2. DESKTOP WERKPLEK -->
   <div id="desktop">
     <div class="app-grid" id="desktop-grid"></div>
   </div>
 
-  <!-- Start Menu -->
+  <!-- STARTMENU -->
   <div id="start-menu">
     <div class="start-menu-header">Applicaties</div>
     <div class="start-menu-list" id="start-list"></div>
   </div>
 
-  <!-- PIN Beveiliging Modal -->
+  <!-- PIN BEVEILIGING MODAL -->
   <div id="pin-modal">
     <div class="pin-box">
       <h3>Voer PIN in om Kiosk te verlaten</h3>
@@ -459,23 +513,20 @@
     </div>
   </div>
 
-  <!-- Taskbar -->
+  <!-- 3. ONDERBALK (Taakbalk) -->
   <div id="taskbar">
     <div class="taskbar-left">
       <button class="start-btn" id="start-btn">
-        <span>⚡</span> TabOS
+        <span>⚡</span> Start
       </button>
     </div>
 
     <div class="taskbar-center" id="taskbar-apps"></div>
 
     <div class="taskbar-right">
-      <div class="sys-tray">
-        <span id="sys-wifi" title="Netwerk status">🌐</span>
-        <span id="sys-battery" title="Accu status">🔋 100%</span>
-        <span id="sys-clock">00:00</span>
-        <span id="sys-fullscreen" style="cursor:pointer;" title="Volledig scherm / Kiosk">⛶</span>
-      </div>
+      <button class="exit-kiosk-btn" id="exit-kiosk-btn" title="Sluit Kiosk / Volledig Beeld">
+        🔒 Kiosk Sluiten
+      </button>
     </div>
   </div>
 
@@ -509,8 +560,8 @@
         winEl.style.width = app.width || '360px';
         winEl.style.height = app.height || '460px';
         
-        const top = Math.max(20, (window.innerHeight - 54 - parseInt(winEl.style.height)) / 2);
-        const left = Math.max(20, (window.innerWidth - parseInt(winEl.style.width)) / 2);
+        const top = Math.max(10, (window.innerHeight - 90 - parseInt(winEl.style.height)) / 2);
+        const left = Math.max(10, (window.innerWidth - parseInt(winEl.style.width)) / 2);
         winEl.style.top = top + 'px';
         winEl.style.left = left + 'px';
 
@@ -667,14 +718,15 @@
     };
 
     /* ===================================================
-       SYSTEEMSTATUS & BEVEILIGDE KIOSK MODUS
+       SYSTEEMSTATUS & BOVENBALK LOGICA
        =================================================== */
-    function updateClock() {
+    function updateClockAndDate() {
       const d = new Date();
-      document.getElementById('sys-clock').innerText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('sys-clock').innerText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      document.getElementById('sys-date').innerText = d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
     }
-    setInterval(updateClock, 1000);
-    updateClock();
+    setInterval(updateClockAndDate, 1000);
+    updateClockAndDate();
 
     if ('getBattery' in navigator) {
       navigator.getBattery().then(battery => {
@@ -689,7 +741,7 @@
     }
 
     function updateOnlineStatus() {
-      document.getElementById('sys-wifi').innerText = navigator.onLine ? '🌐' : '📡❌';
+      document.getElementById('sys-wifi').innerText = navigator.onLine ? '🌐 Online' : '📡 Offline';
     }
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
@@ -703,22 +755,46 @@
       document.getElementById('start-menu').classList.remove('open');
     });
 
+    /* ===================================================
+       BEVEILIGDE KIOSK LOCKDOWN & PIN BEVEILIGING (PIN: 8)
+       =================================================== */
     const pinModal = document.getElementById('pin-modal');
     const pinInput = document.getElementById('pinInput');
-    const fullscreenBtn = document.getElementById('sys-fullscreen');
+    const exitKioskBtn = document.getElementById('exit-kiosk-btn');
+    let kioskActive = false;
 
-    fullscreenBtn.onclick = () => {
+    // Automatisch fullscreen starten bij 1e tik/interactie
+    function enterKiosk() {
       if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      } else {
+        document.documentElement.requestFullscreen().then(() => {
+          kioskActive = true;
+        }).catch(() => {});
+      }
+    }
+
+    document.body.addEventListener('click', enterKiosk, { once: true });
+    document.body.addEventListener('touchstart', enterKiosk, { once: true });
+
+    // Kiosk Sluiten knop vraagt om PIN
+    exitKioskBtn.onclick = () => {
+      pinModal.style.display = 'flex';
+      pinInput.value = '';
+      pinInput.focus();
+    };
+
+    // Als de gebruiker toch uit fullscreen swipet, herstellen we het tenzij ontgrendeld met PIN
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && kioskActive) {
+        // Scherm is zonder PIN verlaten -> Toon meteen de PIN-box!
         pinModal.style.display = 'flex';
         pinInput.value = '';
         pinInput.focus();
       }
-    };
+    });
 
     document.getElementById('pinSubmit').onclick = () => {
       if (pinInput.value === '8') {
+        kioskActive = false; // PIN goedgekeurd
         pinModal.style.display = 'none';
         if (document.fullscreenElement) {
           document.exitFullscreen().catch(() => {});
@@ -731,6 +807,10 @@
 
     document.getElementById('pinCancel').onclick = () => {
       pinModal.style.display = 'none';
+      // Als ze op annuleren klikken, weer terug naar fullscreen dwingen
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
     };
 
     pinInput.onkeydown = (e) => {
@@ -794,7 +874,6 @@
               currentInput = currentInput.length > 1 ? currentInput.slice(0, -1) : '0';
             } else if (action === 'equals') {
               try {
-                // Veilig berekenen via Function
                 currentInput = String(Function('"use strict";return (' + currentInput.replace(/×/g, '*').replace(/÷/g, '/') + ')')());
               } catch {
                 currentInput = 'Fout';
