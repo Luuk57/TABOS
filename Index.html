@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>TabOS Core</title>
+  
+  <!-- PWA Metadata -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22TabOS%22,%22short_name%22:%22TabOS%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%230f172a%22,%22theme_color%22:%22%230f172a%22}">
+
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --taskbar-bg: rgba(15, 23, 42, 0.85);
+      --accent-color: #38bdf8;
+      --text-color: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger-color: #ef4444;
+      --window-header-bg: rgba(30, 41, 59, 0.95);
+      --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    body, html {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: var(--font-family);
+      background: #090d16;
+      color: var(--text-color);
+    }
+
+    /* Desktop Area */
+    #desktop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 54px;
+      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+      overflow: hidden;
+    }
+
+    /* Desktop App Grid */
+    .app-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 20px;
+      padding: 24px;
+      max-width: 600px;
+    }
+
+    .desktop-icon {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid transparent;
+    }
+
+    .desktop-icon:active {
+      transform: scale(0.95);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .desktop-icon .icon {
+      font-size: 40px;
+      margin-bottom: 8px;
+    }
+
+    .desktop-icon .label {
+      font-size: 13px;
+      font-weight: 500;
+      text-align: center;
+      color: var(--text-color);
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* Window Styles */
+    .window {
+      position: absolute;
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 300px;
+      min-height: 200px;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    .window.minimized {
+      opacity: 0;
+      transform: scale(0.8) translateY(100px);
+      pointer-events: none;
+    }
+
+    .window.maximized {
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      border-radius: 0;
+    }
+
+    .window-header {
+      height: 44px;
+      background: var(--window-header-bg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--card-border);
+      cursor: move;
+      touch-action: none;
+    }
+
+    .window-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .window-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .win-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .win-btn:active {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .win-btn.close:active {
+      background: var(--danger-color);
+    }
+
+    .window-body {
+      flex: 1;
+      overflow: auto;
+      padding: 16px;
+      position: relative;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    /* Taskbar */
+    #taskbar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 54px;
+      background: var(--taskbar-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      z-index: 99999;
+    }
+
+    .taskbar-left, .taskbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .taskbar-center {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+    }
+
+    .start-btn {
+      background: var(--accent-color);
+      color: #0f172a;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .taskbar-item {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      max-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .taskbar-item.active {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--accent-color);
+    }
+
+    .sys-tray {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 6px 12px;
+      border-radius: 20px;
+    }
+
+    /* Start Menu */
+    #start-menu {
+      position: absolute;
+      bottom: 64px;
+      left: 12px;
+      width: 320px;
+      background: rgba(30, 41, 59, 0.98);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: none;
+      z-index: 100000;
+    }
+
+    #start-menu.open {
+      display: block;
+    }
+
+    .start-menu-header {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .start-menu-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .start-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .start-item:hover, .start-item:active {
+      background: rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Desktop -->
+  <div id="desktop">
+    <div class="app-grid" id="desktop-grid"></div>
+  </div>
+
+  <!-- Start Menu -->
+  <div id="start-menu">
+    <div class="start-menu-header">Applicaties</div>
+    <div class="start-menu-list" id="start-list"></div>
+  </div>
+
+  <!-- Taskbar -->
+  <div id="taskbar">
+    <div class="taskbar-left">
+      <button class="start-btn" id="start-btn">
+        <span>⚡</span> TabOS
+      </button>
+    </div>
+
+    <div class="taskbar-center" id="taskbar-apps"></div>
+
+    <div class="taskbar-right">
+      <div class="sys-tray">
+        <span id="sys-wifi" title="Netwerk status">🌐</span>
+        <span id="sys-battery" title="Accu status">🔋 100%</span>
+        <span id="sys-clock">00:00</span>
+        <span id="sys-fullscreen" style="cursor:pointer;" title="Volledig scherm">⛶</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ===================================================
+       TABOS CORE ENGINE
+       =================================================== */
+    const TabOS = {
+      apps: {},
+      windows: {},
+      activeZIndex: 100,
+
+      // App Registratie Methode
+      registerApp(id, config) {
+        // config = { title, icon, width, height, render: function(container) {} }
+        this.apps[id] = config;
+        this.renderDesktopIcons();
+        this.renderStartMenuItems();
+      },
+
+      // Open een app in een nieuw of bestaand venster
+      openApp(id) {
+        if (this.windows[id]) {
+          this.focusWindow(id);
+          this.windows[id].element.classList.remove('minimized');
+          return;
+        }
+
+        const app = this.apps[id];
+        if (!app) return;
+
+        const winEl = document.createElement('div');
+        winEl.className = 'window';
+        winEl.style.width = app.width || '500px';
+        winEl.style.height = app.height || '400px';
+        
+        // Standaard centreren
+        const top = Math.max(20, (window.innerHeight - 54 - parseInt(winEl.style.height)) / 2);
+        const left = Math.max(20, (window.innerWidth - parseInt(winEl.style.width)) / 2);
+        winEl.style.top = top + 'px';
+        winEl.style.left = left + 'px';
+
+        winEl.innerHTML = `
+          <div class="window-header">
+            <div class="window-title">
+              <span>${app.icon}</span>
+              <span>${app.title}</span>
+            </div>
+            <div class="window-controls">
+              <button class="win-btn min">—</button>
+              <button class="win-btn max">□</button>
+              <button class="win-btn close">✕</button>
+            </div>
+          </div>
+          <div class="window-body"></div>
+        `;
+
+        document.getElementById('desktop').appendChild(winEl);
+
+        const winData = {
+          id: id,
+          element: winEl,
+          isMaximized: false
+        };
+
+        this.windows[id] = winData;
+
+        // Vul venster content via app render-functie
+        const bodyEl = winEl.querySelector('.window-body');
+        if (typeof app.render === 'function') {
+          app.render(bodyEl);
+        }
+
+        // Window Events
+        this.setupWindowEvents(winData);
+        this.focusWindow(id);
+        this.updateTaskbar();
+        
+        // Sluit startmenu als het open is
+        document.getElementById('start-menu').classList.remove('open');
+      },
+
+      focusWindow(id) {
+        const win = this.windows[id];
+        if (!win) return;
+        this.activeZIndex++;
+        win.element.style.zIndex = this.activeZIndex;
+        this.updateTaskbar();
+      },
+
+      closeWindow(id) {
+        const win = this.windows[id];
+        if (!win) return;
+        win.element.remove();
+        delete this.windows[id];
+        this.updateTaskbar();
+      },
+
+      toggleMinimize(id) {
+        const win = this.windows[id];
+        if (!win) return;
+        win.element.classList.toggle('minimized');
+      },
+
+      toggleMaximize(id) {
+        const win = this.windows[id];
+        if (!win) return;
+        win.isMaximized = !win.isMaximized;
+        win.element.classList.toggle('maximized', win.isMax
