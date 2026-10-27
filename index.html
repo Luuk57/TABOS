@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TabOS - Sheets Sync Edition</title>
+  <title>TabOS - Stable Edition</title>
   
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
@@ -73,7 +73,7 @@
     .pin-btn.cancel { background: rgba(255,255,255,0.1); color: #fff; }
     .pin-btn.submit { background: var(--accent-color); color: #0f172a; }
 
-    /* Vocht Tracker Componenten - 4 Kolommen */
+    /* Vocht Tracker - 4 Kolommen */
     .vocht-app { display: flex; flex-direction: column; gap: 14px; height: 100%; }
     .vocht-header-card { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 14px; text-align: center; }
     .vocht-totaal { font-size: 32px; font-weight: 700; color: var(--accent-color); }
@@ -188,7 +188,6 @@
         const grid = document.getElementById('desktop-grid'); grid.innerHTML = '';
         Object.keys(this.apps).forEach(id => {
           const app = this.apps[id]; const iconEl = document.createElement('div'); iconEl.className = 'desktop-icon';
-          iconEl.iconEl?.remove();
           iconEl.innerHTML = `<div class="icon">${app.icon}</div><div class="label">${app.title}</div>`;
           iconEl.onclick = () => this.openApp(id); grid.appendChild(iconEl);
         });
@@ -229,14 +228,17 @@
     document.getElementById('pinCancel').onclick = () => pinModal.style.display = 'none';
 
     /* ===================================================
-       APP: VOCHT TRACKER (ROBUUSTE HYBRIDE SYNC)
+       APP: VOCHT TRACKER (STABLE LOCAL + SHEETS SYNC)
        =================================================== */
     TabOS.registerApp('vochttracker', {
       title: 'Vocht Tracker', icon: '💧', width: '440px', height: '500px',
       render: function(container) {
         let scriptUrl = localStorage.getItem('google_sheet_script_url') || '';
         let limiet = 1000;
-        let totaalVocht = parseInt(localStorage.getItem('tabos_vandaag_ml')) || 0;
+        
+        // Zorg dat de teller per dag wordt bijgehouden in localStorage
+        const vandaagKey = 'vocht_totaal_' + new Date().toISOString().slice(0,10);
+        let totaalVocht = parseInt(localStorage.getItem(vandaagKey)) || 0;
         let isEditMode = false;
         
         let tegels = JSON.parse(localStorage.getItem('tabos_tegels')) || [
@@ -248,9 +250,9 @@
         container.innerHTML = `
           <div class="vocht-app">
             <div class="vocht-header-card">
-              <div style="font-size: 12px; color: var(--text-muted);">Vandaag gedronken (Hybride Sync)</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Vandaag gedronken (Stabiele Stand)</div>
               <div class="vocht-totaal" id="totaalDisplay">${totaalVocht} ml</div>
-              <div style="font-size: 12px;" id="statusMsg">Klaar voor gebruik</div>
+              <div style="font-size: 12px;" id="statusMsg">Actief & Verbonden</div>
               <div class="progress-bar-container"><div class="progress-bar-fill" id="pBar"></div></div>
             </div>
 
@@ -265,7 +267,7 @@
               <details style="font-size:12px; color:var(--text-muted);">
                 <summary style="cursor:pointer; margin-bottom:6px;">⚙️ Google Sheets Koppeling</summary>
                 <input type="text" id="sheetUrlInput" class="sheet-input-box" placeholder="Plak Web App URL..." value="${scriptUrl}">
-                <button id="saveSheetUrl" style="background:var(--accent-color); border:none; color:#0f172a; padding:6px 12px; border-radius:6px; font-weight:600; margin-top:6px; cursor:pointer; width:100%;">URL Opslaan & Syncen</button>
+                <button id="saveSheetUrl" style="background:var(--accent-color); border:none; color:#0f172a; padding:6px 12px; border-radius:6px; font-weight:600; margin-top:6px; cursor:pointer; width:100%;">URL Opslaan</button>
               </details>
             </div>
           </div>
@@ -276,50 +278,9 @@
         const statusMsg = container.querySelector('#statusMsg');
         const tegelsGrid = container.querySelector('#tegelsGrid');
 
-        function syncWithSheets() {
-          if (!scriptUrl) {
-            statusMsg.innerText = "Lokale modus (Geen URL)";
-            updateUI();
-            renderTegels();
-            return;
-          }
-          statusMsg.innerText = "Synchroniseren met Sheets...";
-          
-          fetch(scriptUrl, { method: 'GET', mode: 'cors' })
-            .then(res => res.json())
-            .then(data => {
-              if (data.limiet) limiet = data.limiet;
-              if (data.vandaagMl !== undefined) {
-                totaalVocht = Number(data.vandaagMl) || 0;
-                localStorage.setItem('tabos_vandaag_ml', totaalVocht);
-              }
-              if (data.tegels && data.tegels.length > 0) {
-                tegels = data.tegels;
-                localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
-              }
-              statusMsg.innerText = "Live gesynchroniseerd ✅";
-              renderTegels();
-              updateUI();
-            })
-            .catch(() => {
-              statusMsg.innerText = "Verbonden (Lokale cache actief)";
-              renderTegels();
-              updateUI();
-            });
-        }
-
-        function saveTegelsToSheets() {
-          localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
-          if (!scriptUrl) return;
-          fetch(scriptUrl, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'save_tegels', tegels: tegels })
-          }).catch(() => {});
-        }
-
         function updateUI() {
           totaalDisplay.innerText = totaalVocht + ' ml';
-          localStorage.setItem('tabos_vandaag_ml', totaalVocht);
+          localStorage.setItem(vandaagKey, totaalVocht);
           const pct = Math.min(100, (totaalVocht / limiet) * 100);
           pBar.style.width = pct + '%';
           
@@ -332,6 +293,30 @@
             statusMsg.style.color = 'var(--success-color)';
             statusMsg.innerText = `Nog ${limiet - totaalVocht} ml over van ${limiet}ml.`;
           }
+        }
+
+        function syncConfig() {
+          if (!scriptUrl) return;
+          fetch(scriptUrl)
+            .then(res => res.json())
+            .then(data => {
+              if (data.limiet) limiet = data.limiet;
+              if (data.tegels && data.tegels.length > 0) {
+                tegels = data.tegels;
+                localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
+              }
+              renderTegels();
+              updateUI();
+            }).catch(() => {});
+        }
+
+        function saveTegelsToSheets() {
+          localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
+          if (!scriptUrl) return;
+          fetch(scriptUrl, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'save_tegels', tegels: tegels })
+          }).catch(() => {});
         }
 
         function renderTegels() {
@@ -349,14 +334,15 @@
                   renderTegels();
                 }
               } else {
+                // Tel direct op op het scherm en sla op in geheugen
                 totaalVocht += t.ml;
                 updateUI();
+                
+                // Stuur onzichtbaar naar Google Sheet voor in de log
                 if (scriptUrl) {
                   fetch(scriptUrl, {
                     method: 'POST',
                     body: JSON.stringify({ action: 'add_intake', naam: t.naam, ml: t.ml, categorie: t.categorie || 'Drank' })
-                  }).then(() => {
-                    setTimeout(syncWithSheets, 1000);
                   }).catch(() => {});
                 }
               }
@@ -390,11 +376,13 @@
         container.querySelector('#saveSheetUrl').onclick = () => {
           scriptUrl = container.querySelector('#sheetUrlInput').value.trim();
           localStorage.setItem('google_sheet_script_url', scriptUrl);
-          alert('Google Sheet Web App URL opgeslagen!');
-          syncWithSheets();
+          alert('Google Sheet URL opgeslagen!');
+          syncConfig();
         };
 
-        syncWithSheets();
+        renderTegels();
+        updateUI();
+        syncConfig();
       }
     });
 
