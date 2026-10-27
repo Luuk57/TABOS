@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TabOS - Kiosk Edition</title>
+  <title>TabOS - Tablet Edition</title>
   
-  <!-- PWA Fullscreen Kiosk Metadata -->
+  <!-- PWA Metadata & Manifest Koppeling -->
+  <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#090d16">
-  <link rel="manifest" href="data:application/manifest+json,{%22name%22:%22TabOS%22,%22short_name%22:%22TabOS%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23090d16%22,%22theme_color%22:%22%23090d16%22}">
 
   <style>
     :root {
@@ -50,7 +50,7 @@
       left: 0;
     }
 
-    /* 1. Bovenbalk van TabOS */
+    /* Bovenbalk Statusbar */
     #topbar {
       position: absolute;
       top: 0;
@@ -58,8 +58,6 @@
       right: 0;
       height: 36px;
       background: var(--topbar-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--card-border);
       display: flex;
       align-items: center;
@@ -84,7 +82,7 @@
       gap: 14px;
     }
 
-    /* Desktop Area (Tussen bovenbalk en onderbalk) */
+    /* Desktop Werkplek */
     #desktop {
       position: absolute;
       top: 36px;
@@ -98,7 +96,7 @@
     /* Desktop App Grid */
     .app-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
       gap: 20px;
       padding: 24px;
       max-width: 700px;
@@ -109,7 +107,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 12px;
+      padding: 16px 12px;
       border-radius: 16px;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -123,7 +121,7 @@
     }
 
     .desktop-icon .icon {
-      font-size: 40px;
+      font-size: 44px;
       margin-bottom: 8px;
     }
 
@@ -135,7 +133,7 @@
       text-shadow: 0 2px 4px rgba(0,0,0,0.5);
     }
 
-    /* Window Styles */
+    /* Vensters */
     .window {
       position: absolute;
       background: rgba(30, 41, 59, 0.95);
@@ -147,8 +145,8 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      min-width: 300px;
-      min-height: 380px;
+      min-width: 320px;
+      min-height: 400px;
       transition: transform 0.15s ease, opacity 0.15s ease;
     }
 
@@ -167,7 +165,7 @@
     }
 
     .window-header {
-      height: 44px;
+      height: 48px;
       background: var(--window-header-bg);
       display: flex;
       align-items: center;
@@ -188,12 +186,12 @@
 
     .window-controls {
       display: flex;
-      gap: 8px;
+      gap: 10px;
     }
 
     .win-btn {
-      width: 28px;
-      height: 28px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       border: none;
       background: rgba(255, 255, 255, 0.1);
@@ -222,7 +220,7 @@
       -webkit-user-select: text;
     }
 
-    /* 2. Onderbalk (Taakbalk) van TabOS */
+    /* Onderbalk Taakbalk */
     #taskbar {
       position: absolute;
       bottom: 0;
@@ -230,8 +228,6 @@
       right: 0;
       height: 54px;
       background: var(--taskbar-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
       border-top: 1px solid var(--card-border);
       display: flex;
       align-items: center;
@@ -307,7 +303,7 @@
       position: absolute;
       bottom: 64px;
       left: 12px;
-      width: 320px;
+      width: 300px;
       background: rgba(30, 41, 59, 0.98);
       backdrop-filter: blur(20px);
       border: 1px solid var(--card-border);
@@ -340,9 +336,10 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 10px;
+      padding: 12px;
       border-radius: 8px;
       cursor: pointer;
+      font-size: 14px;
     }
 
     .start-item:hover, .start-item:active {
@@ -384,7 +381,7 @@
       color: #fff;
       font-size: 24px;
       text-align: center;
-      padding: 10px;
+      padding: 12px;
       margin-bottom: 16px;
       letter-spacing: 8px;
     }
@@ -396,11 +393,12 @@
 
     .pin-btn {
       flex: 1;
-      padding: 10px;
+      padding: 12px;
       border-radius: 8px;
       border: none;
       font-weight: 600;
       cursor: pointer;
+      font-size: 14px;
     }
 
     .pin-btn.cancel {
@@ -413,7 +411,7 @@
       color: #0f172a;
     }
 
-    /* Calculator */
+    /* Rekenmachine */
     .calculator {
       display: flex;
       flex-direction: column;
@@ -427,11 +425,11 @@
       border-radius: 12px;
       padding: 16px;
       text-align: right;
-      font-size: 28px;
+      font-size: 32px;
       font-weight: 600;
       color: #fff;
       word-break: break-all;
-      min-height: 70px;
+      min-height: 75px;
       display: flex;
       align-items: flex-end;
       justify-content: flex-end;
@@ -440,16 +438,16 @@
     .calc-buttons {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
+      gap: 10px;
       flex: 1;
     }
 
     .calc-btn {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--card-border);
-      border-radius: 10px;
+      border-radius: 12px;
       color: var(--text-color);
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 600;
       cursor: pointer;
       display: flex;
@@ -476,35 +474,35 @@
 </head>
 <body>
 
-  <!-- 1. BOVENBALK (Statusbalk) -->
+  <!-- Bovenbalk -->
   <div id="topbar">
     <div class="topbar-left">
       <span>🖥️ TabOS</span>
-      <span style="font-size:11px; opacity:0.6; font-weight:normal;">| Lenovo Edition</span>
+      <span style="font-size:11px; opacity:0.6; font-weight:normal;">| Lenovo Tablet</span>
     </div>
     <div class="topbar-right">
-      <span id="sys-wifi" title="Netwerk status">🌐 Online</span>
-      <span id="sys-battery" title="Accu status">🔋 100%</span>
+      <span id="sys-wifi">🌐 Online</span>
+      <span id="sys-battery">🔋 100%</span>
       <span id="sys-date" style="opacity:0.8;"></span>
       <span id="sys-clock" style="font-weight:700; color:var(--accent-color);">00:00</span>
     </div>
   </div>
 
-  <!-- 2. DESKTOP WERKPLEK -->
+  <!-- Desktop -->
   <div id="desktop">
     <div class="app-grid" id="desktop-grid"></div>
   </div>
 
-  <!-- STARTMENU -->
+  <!-- Start Menu -->
   <div id="start-menu">
     <div class="start-menu-header">Applicaties</div>
     <div class="start-menu-list" id="start-list"></div>
   </div>
 
-  <!-- PIN BEVEILIGING MODAL -->
+  <!-- PIN Modal -->
   <div id="pin-modal">
     <div class="pin-box">
-      <h3>Voer PIN in om Kiosk te verlaten</h3>
+      <h3>Voer PIN in (8)</h3>
       <input type="password" id="pinInput" class="pin-input" maxlength="4" placeholder="••••">
       <div class="pin-buttons">
         <button class="pin-btn cancel" id="pinCancel">Annuleer</button>
@@ -513,7 +511,7 @@
     </div>
   </div>
 
-  <!-- 3. ONDERBALK (Taakbalk) -->
+  <!-- Onderbalk -->
   <div id="taskbar">
     <div class="taskbar-left">
       <button class="start-btn" id="start-btn">
@@ -524,16 +522,24 @@
     <div class="taskbar-center" id="taskbar-apps"></div>
 
     <div class="taskbar-right">
-      <button class="exit-kiosk-btn" id="exit-kiosk-btn" title="Sluit Kiosk / Volledig Beeld">
+      <button class="exit-kiosk-btn" id="exit-kiosk-btn" title="Verlaat Kiosk">
         🔒 Kiosk Sluiten
       </button>
     </div>
   </div>
 
   <script>
-    /* ===================================================
-       TABOS CORE ENGINE
-       =================================================== */
+    /* Service Worker Registratie voor PWA Installatie op Android Chrome */
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        self.addEventListener('install', (e) => self.skipWaiting());
+        self.addEventListener('activate', (e) => self.clients.claim());
+        self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
+      `;
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+    }
+
     const TabOS = {
       apps: {},
       windows: {},
@@ -717,12 +723,10 @@
       }
     };
 
-    /* ===================================================
-       SYSTEEMSTATUS & BOVENBALK LOGICA
-       =================================================== */
+    // Systeem Klok & Accu
     function updateClockAndDate() {
       const d = new Date();
-      document.getElementById('sys-clock').innerText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      document.getElementById('sys-clock').innerText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       document.getElementById('sys-date').innerText = d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
     }
     setInterval(updateClockAndDate, 1000);
@@ -755,15 +759,12 @@
       document.getElementById('start-menu').classList.remove('open');
     });
 
-    /* ===================================================
-       BEVEILIGDE KIOSK LOCKDOWN & PIN BEVEILIGING (PIN: 8)
-       =================================================== */
+    // Kiosk & PIN Beveiliging (PIN = 8)
     const pinModal = document.getElementById('pin-modal');
     const pinInput = document.getElementById('pinInput');
     const exitKioskBtn = document.getElementById('exit-kiosk-btn');
     let kioskActive = false;
 
-    // Automatisch fullscreen starten bij 1e tik/interactie
     function enterKiosk() {
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().then(() => {
@@ -775,17 +776,14 @@
     document.body.addEventListener('click', enterKiosk, { once: true });
     document.body.addEventListener('touchstart', enterKiosk, { once: true });
 
-    // Kiosk Sluiten knop vraagt om PIN
     exitKioskBtn.onclick = () => {
       pinModal.style.display = 'flex';
       pinInput.value = '';
       pinInput.focus();
     };
 
-    // Als de gebruiker toch uit fullscreen swipet, herstellen we het tenzij ontgrendeld met PIN
     document.addEventListener('fullscreenchange', () => {
       if (!document.fullscreenElement && kioskActive) {
-        // Scherm is zonder PIN verlaten -> Toon meteen de PIN-box!
         pinModal.style.display = 'flex';
         pinInput.value = '';
         pinInput.focus();
@@ -794,7 +792,7 @@
 
     document.getElementById('pinSubmit').onclick = () => {
       if (pinInput.value === '8') {
-        kioskActive = false; // PIN goedgekeurd
+        kioskActive = false;
         pinModal.style.display = 'none';
         if (document.fullscreenElement) {
           document.exitFullscreen().catch(() => {});
@@ -807,7 +805,6 @@
 
     document.getElementById('pinCancel').onclick = () => {
       pinModal.style.display = 'none';
-      // Als ze op annuleren klikken, weer terug naar fullscreen dwingen
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
@@ -819,14 +816,12 @@
       }
     };
 
-    /* ===================================================
-       APP 1: CALCULATOR (Rekenmachine)
-       =================================================== */
+    // Standaard Rekenmachine App
     TabOS.registerApp('calculator', {
       title: 'Rekenmachine',
       icon: '🧮',
-      width: '320px',
-      height: '420px',
+      width: '340px',
+      height: '460px',
       render: function(container) {
         container.innerHTML = `
           <div class="calculator">
@@ -891,62 +886,6 @@
         });
       }
     });
-
-    /* ===================================================
-       APP 2: 1-FILE APP INSTALLER
-       =================================================== */
-    TabOS.registerApp('installer', {
-      title: 'App Installer',
-      icon: '📦',
-      width: '500px',
-      height: '380px',
-      render: function(container) {
-        container.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap:16px; height:100%;">
-            <h3>Installeer 1-File App</h3>
-            <p style="font-size:13px; color:var(--text-muted);">Plak de code van je app om hem direct toe te voegen aan TabOS.</p>
-            
-            <textarea id="appCodeInput" placeholder="Plak hier je HTML/JS app code..." style="width:100%; flex:1; background:rgba(0,0,0,0.3); color:#fff; border:1px solid var(--card-border); border-radius:8px; padding:10px; font-family:monospace; font-size:12px; resize:none;"></textarea>
-            
-            <div style="display:flex; gap:10px;">
-              <input type="text" id="appNameInput" placeholder="App Naam" style="flex:1; background:rgba(0,0,0,0.3); color:#fff; border:1px solid var(--card-border); border-radius:8px; padding:8px 12px; font-size:13px;">
-              <button id="installBtn" style="background:var(--accent-color); color:#0f172a; border:none; padding:8px 20px; border-radius:8px; font-weight:700; cursor:pointer;">Installeer</button>
-            </div>
-          </div>
-        `;
-
-        container.querySelector('#installBtn').onclick = () => {
-          const code = container.querySelector('#appCodeInput').value;
-          const name = container.querySelector('#appNameInput').value || 'Eigen App';
-          
-          if (!code) {
-            alert('Voer eerst app-code in!');
-            return;
-          }
-
-          const appId = 'custom_' + Date.now();
-          
-          TabOS.registerApp(appId, {
-            title: name,
-            icon: '🧩',
-            width: '500px',
-            height: '400px',
-            render: function(appContainer) {
-              appContainer.innerHTML = code;
-              const scripts = appContainer.querySelectorAll('script');
-              scripts.forEach(s => {
-                const newScript = document.createElement('script');
-                newScript.textContent = s.textContent;
-                document.body.appendChild(newScript);
-              });
-            }
-          });
-
-          alert(`App "${name}" is succesvol geïnstalleerd!`);
-        };
-      }
-    });
-
   </script>
 </body>
 </html>
