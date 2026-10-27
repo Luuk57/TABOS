@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TabOS - Stable Edition</title>
+  <title>TabOS - Sheets Viewer Edition</title>
   
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
@@ -50,7 +50,7 @@
     .window-controls { display: flex; gap: 10px; }
     .win-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(255, 255, 255, 0.1); color: var(--text-color); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; }
     .win-btn.close:active { background: var(--danger-color); }
-    .window-body { flex: 1; overflow: auto; padding: 16px; position: relative; }
+    .window-body { flex: 1; overflow: hidden; position: pointer; display: flex; flex-direction: column; }
 
     #taskbar { position: absolute; bottom: 0; left: 0; right: 0; height: 54px; background: var(--taskbar-bg); border-top: 1px solid var(--card-border); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; z-index: 99999; }
     .taskbar-left, .taskbar-right { display: flex; align-items: center; gap: 8px; }
@@ -72,22 +72,6 @@
     .pin-btn { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; }
     .pin-btn.cancel { background: rgba(255,255,255,0.1); color: #fff; }
     .pin-btn.submit { background: var(--accent-color); color: #0f172a; }
-
-    /* Vocht Tracker - 4 Kolommen */
-    .vocht-app { display: flex; flex-direction: column; gap: 14px; height: 100%; }
-    .vocht-header-card { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 14px; text-align: center; }
-    .vocht-totaal { font-size: 32px; font-weight: 700; color: var(--accent-color); }
-    .progress-bar-container { width: 100%; height: 10px; background: rgba(255, 255, 255, 0.1); border-radius: 5px; overflow: hidden; margin-top: 8px; }
-    .progress-bar-fill { height: 100%; background: var(--success-color); width: 0%; transition: width 0.3s; }
-    
-    .vocht-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-height: 240px; overflow-y: auto; padding-right: 4px; }
-    
-    .vocht-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-border); border-radius: 10px; padding: 10px 4px; color: var(--text-color); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; position: relative; text-align: center; }
-    .vocht-btn:active { transform: scale(0.97); background: rgba(255, 255, 255, 0.15); }
-    .vocht-btn .delete-tegel { position: absolute; top: 2px; right: 4px; color: #ef4444; font-size: 12px; display: none; }
-    .edit-mode .delete-tegel { display: block; }
-    .add-tegel-btn { background: rgba(56, 189, 248, 0.1); border: 1px dashed var(--accent-color); color: var(--accent-color); border-radius: 10px; padding: 10px 4px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; grid-column: span 4; }
-    .sheet-input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 8px; color: #fff; padding: 8px; width: 100%; font-size: 12px; margin-top: 4px; }
   </style>
 </head>
 <body>
@@ -161,7 +145,7 @@
         const app = this.apps[id]; if (!app) return;
         const winEl = document.createElement('div');
         winEl.className = 'window';
-        winEl.style.width = app.width || '440px'; winEl.style.height = app.height || '500px';
+        winEl.style.width = app.width || '800px'; winEl.style.height = app.height || '550px';
         winEl.style.top = Math.max(10, (window.innerHeight - 90 - parseInt(winEl.style.height)) / 2) + 'px';
         winEl.style.left = Math.max(10, (window.innerWidth - parseInt(winEl.style.width)) / 2) + 'px';
         winEl.innerHTML = `<div class="window-header"><div class="window-title"><span>${app.icon}</span><span>${app.title}</span></div><div class="window-controls"><button class="win-btn min">—</button><button class="win-btn max">□</button><button class="win-btn close">✕</button></div></div><div class="window-body"></div>`;
@@ -228,161 +212,19 @@
     document.getElementById('pinCancel').onclick = () => pinModal.style.display = 'none';
 
     /* ===================================================
-       APP: VOCHT TRACKER (STABLE LOCAL + SHEETS SYNC)
+       APP: VOCHT TRACKER (DIRECTE GOOGLE SHEET VIEWER)
        =================================================== */
     TabOS.registerApp('vochttracker', {
-      title: 'Vocht Tracker', icon: '💧', width: '440px', height: '500px',
+      title: 'Vocht Tracker', icon: '💧', width: '820px', height: '560px',
       render: function(container) {
-        let scriptUrl = localStorage.getItem('google_sheet_script_url') || '';
-        let limiet = 1000;
-        
-        // Zorg dat de teller per dag wordt bijgehouden in localStorage
-        const vandaagKey = 'vocht_totaal_' + new Date().toISOString().slice(0,10);
-        let totaalVocht = parseInt(localStorage.getItem(vandaagKey)) || 0;
-        let isEditMode = false;
-        
-        let tegels = JSON.parse(localStorage.getItem('tabos_tegels')) || [
-          { id: 't1', categorie: 'Drank', naam: 'Koffie/Thee', ml: 150, icon: '☕' },
-          { id: 't2', categorie: 'Drank', naam: 'Water', ml: 250, icon: '🥛' },
-          { id: 't3', categorie: 'Drank', naam: 'Flesje', ml: 500, icon: '🍼' }
-        ];
+        // Vult hieronder je volledige Google Spreadsheet link in tussen de aanhalingstekens:
+        const sheetUrl = "https://docs.google.com/spreadsheets/d/1JQIGWYuzV19bRojebXgjffSjGCYB3nSnSayravOY2WI/edit?gid=2140100543#gid=2140100543";
 
         container.innerHTML = `
-          <div class="vocht-app">
-            <div class="vocht-header-card">
-              <div style="font-size: 12px; color: var(--text-muted);">Vandaag gedronken (Stabiele Stand)</div>
-              <div class="vocht-totaal" id="totaalDisplay">${totaalVocht} ml</div>
-              <div style="font-size: 12px;" id="statusMsg">Actief & Verbonden</div>
-              <div class="progress-bar-container"><div class="progress-bar-fill" id="pBar"></div></div>
-            </div>
-
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">TEGELS (4 KOLOMMEN):</span>
-              <button id="toggleEditTegels" style="background:none; border:none; color:var(--accent-color); font-size:12px; cursor:pointer;">⚙️ Tegels beheren</button>
-            </div>
-
-            <div class="vocht-grid" id="tegelsGrid"></div>
-
-            <div style="margin-top:auto; padding-top:10px; border-top:1px solid var(--card-border);">
-              <details style="font-size:12px; color:var(--text-muted);">
-                <summary style="cursor:pointer; margin-bottom:6px;">⚙️ Google Sheets Koppeling</summary>
-                <input type="text" id="sheetUrlInput" class="sheet-input-box" placeholder="Plak Web App URL..." value="${scriptUrl}">
-                <button id="saveSheetUrl" style="background:var(--accent-color); border:none; color:#0f172a; padding:6px 12px; border-radius:6px; font-weight:600; margin-top:6px; cursor:pointer; width:100%;">URL Opslaan</button>
-              </details>
-            </div>
+          <div style="width:100%; height:100%; display:flex; flex-direction:column;">
+            <iframe src="${sheetUrl}" style="width:100%; height:100%; border:none; background:#fff;" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
           </div>
         `;
-
-        const totaalDisplay = container.querySelector('#totaalDisplay');
-        const pBar = container.querySelector('#pBar');
-        const statusMsg = container.querySelector('#statusMsg');
-        const tegelsGrid = container.querySelector('#tegelsGrid');
-
-        function updateUI() {
-          totaalDisplay.innerText = totaalVocht + ' ml';
-          localStorage.setItem(vandaagKey, totaalVocht);
-          const pct = Math.min(100, (totaalVocht / limiet) * 100);
-          pBar.style.width = pct + '%';
-          
-          if (totaalVocht > limiet) {
-            pBar.style.background = 'var(--danger-color)';
-            statusMsg.style.color = 'var(--danger-color)';
-            statusMsg.innerText = `Let op: ${totaalVocht - limiet} ml over de limiet!`;
-          } else {
-            pBar.style.background = 'var(--success-color)';
-            statusMsg.style.color = 'var(--success-color)';
-            statusMsg.innerText = `Nog ${limiet - totaalVocht} ml over van ${limiet}ml.`;
-          }
-        }
-
-        function syncConfig() {
-          if (!scriptUrl) return;
-          fetch(scriptUrl)
-            .then(res => res.json())
-            .then(data => {
-              if (data.limiet) limiet = data.limiet;
-              if (data.tegels && data.tegels.length > 0) {
-                tegels = data.tegels;
-                localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
-              }
-              renderTegels();
-              updateUI();
-            }).catch(() => {});
-        }
-
-        function saveTegelsToSheets() {
-          localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
-          if (!scriptUrl) return;
-          fetch(scriptUrl, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'save_tegels', tegels: tegels })
-          }).catch(() => {});
-        }
-
-        function renderTegels() {
-          tegelsGrid.innerHTML = '';
-          tegels.forEach(t => {
-            const btn = document.createElement('button');
-            btn.className = 'vocht-btn';
-            btn.innerHTML = `<span class="delete-tegel">✕</span><span style="font-size:20px;">${t.icon}</span><span>${t.naam}</span><span style="color:var(--accent-color);">+${t.ml}ml</span>`;
-            
-            btn.onclick = (e) => {
-              if (isEditMode) {
-                if (e.target.classList.contains('delete-tegel') || confirm(`Tegel "${t.naam}" verwijderen?`)) {
-                  tegels = tegels.filter(item => item.id !== t.id);
-                  saveTegelsToSheets();
-                  renderTegels();
-                }
-              } else {
-                // Tel direct op op het scherm en sla op in geheugen
-                totaalVocht += t.ml;
-                updateUI();
-                
-                // Stuur onzichtbaar naar Google Sheet voor in de log
-                if (scriptUrl) {
-                  fetch(scriptUrl, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'add_intake', naam: t.naam, ml: t.ml, categorie: t.categorie || 'Drank' })
-                  }).catch(() => {});
-                }
-              }
-            };
-            tegelsGrid.appendChild(btn);
-          });
-
-          const addBtn = document.createElement('button');
-          addBtn.className = 'add-tegel-btn';
-          addBtn.innerHTML = `➕ Nieuwe tegel toevoegen`;
-          addBtn.onclick = () => {
-            const naam = prompt("Naam van het drankje/eten:");
-            if (!naam) return;
-            const ml = parseInt(prompt("Hoeveelheid in ml:", "150")) || 0;
-            const icon = prompt("Emoji icoon (bijv. ☕, 🥛, 🥪):", "🥤") || "🥤";
-            
-            const newTegel = { id: 't_' + Date.now(), categorie: 'Drank', naam: naam, ml: ml, icon: icon };
-            tegels.push(newTegel);
-            saveTegelsToSheets();
-            renderTegels();
-          };
-          tegelsGrid.appendChild(addBtn);
-        }
-
-        container.querySelector('#toggleEditTegels').onclick = () => {
-          isEditMode = !isEditMode;
-          tegelsGrid.classList.toggle('edit-mode', isEditMode);
-          container.querySelector('#toggleEditTegels').innerText = isEditMode ? "✓ Klaar" : "⚙️ Tegels beheren";
-        };
-
-        container.querySelector('#saveSheetUrl').onclick = () => {
-          scriptUrl = container.querySelector('#sheetUrlInput').value.trim();
-          localStorage.setItem('google_sheet_script_url', scriptUrl);
-          alert('Google Sheet URL opgeslagen!');
-          syncConfig();
-        };
-
-        renderTegels();
-        updateUI();
-        syncConfig();
       }
     });
 
