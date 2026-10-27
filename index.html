@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>TabOS - Tablet Edition</title>
   
-  <!-- PWA Metadata & Manifest Koppeling -->
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -48,6 +47,8 @@
       position: fixed;
       top: 0;
       left: 0;
+      /* Voorkomt dat het scherm kan scrollen of 'rubberbanden' bij de randen */
+      overscroll-behavior: none;
     }
 
     /* Bovenbalk Statusbar */
@@ -529,7 +530,7 @@
   </div>
 
   <script>
-    /* Service Worker Registratie voor PWA Installatie op Android Chrome */
+    /* Service Worker Registratie */
     if ('serviceWorker' in navigator) {
       const swCode = `
         self.addEventListener('install', (e) => self.skipWaiting());
@@ -759,7 +760,7 @@
       document.getElementById('start-menu').classList.remove('open');
     });
 
-    // Kiosk & PIN Beveiliging (PIN = 8)
+    // Kiosk & Strenge Immersive Fullscreen Beveiliging (PIN = 8)
     const pinModal = document.getElementById('pin-modal');
     const pinInput = document.getElementById('pinInput');
     const exitKioskBtn = document.getElementById('exit-kiosk-btn');
@@ -767,9 +768,14 @@
 
     function enterKiosk() {
       if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().then(() => {
-          kioskActive = true;
-        }).catch(() => {});
+        // Gebruik 'immersive' modus om Android randen te verbergen
+        const element = document.documentElement;
+        const requestFS = element.requestFullscreen || element.webkitRequestFullscreen;
+        if (requestFS) {
+          requestFS.call(element, { navigationUI: "hide" }).then(() => {
+            kioskActive = true;
+          }).catch(() => {});
+        }
       }
     }
 
@@ -806,7 +812,7 @@
     document.getElementById('pinCancel').onclick = () => {
       pinModal.style.display = 'none';
       if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
+        enterKiosk();
       }
     };
 
