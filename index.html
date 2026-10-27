@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TabOS - Kiosk Edition</title>
+  <title>TabOS - Calculator Edition</title>
   
   <!-- PWA Metadata -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -109,8 +109,8 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      min-width: 320px;
-      min-height: 240px;
+      min-width: 300px;
+      min-height: 380px;
       transition: transform 0.15s ease, opacity 0.15s ease;
     }
 
@@ -371,81 +371,66 @@
       color: #0f172a;
     }
 
-    /* Smart Home */
-    .smarthome-container {
+    /* ===================================================
+       CALCULATOR STYLES
+       =================================================== */
+    .calculator {
       display: flex;
       flex-direction: column;
-      gap: 20px;
       height: 100%;
-    }
-
-    .room-tabs {
-      display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      padding-bottom: 4px;
-    }
-
-    .room-tab {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--card-border);
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s;
-    }
-
-    .room-tab.active {
-      background: var(--accent-color);
-      color: #0f172a;
-      border-color: var(--accent-color);
-    }
-
-    .tiles-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: 12px;
     }
 
-    .device-tile {
-      background: rgba(255, 255, 255, 0.04);
+    .calc-screen {
+      background: rgba(0, 0, 0, 0.4);
       border: 1px solid var(--card-border);
-      border-radius: 14px;
+      border-radius: 12px;
       padding: 16px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      height: 110px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .device-tile.on {
-      background: rgba(56, 189, 248, 0.15);
-      border-color: var(--accent-color);
-      box-shadow: 0 0 15px var(--accent-glow);
-    }
-
-    .device-tile .tile-icon {
-      font-size: 24px;
-    }
-
-    .device-tile .tile-info .tile-name {
-      font-size: 13px;
+      text-align: right;
+      font-size: 28px;
       font-weight: 600;
-      margin-bottom: 2px;
+      color: #fff;
+      word-break: break-all;
+      min-height: 70px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
     }
 
-    .device-tile .tile-info .tile-state {
-      font-size: 11px;
-      color: var(--text-muted);
+    .calc-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      flex: 1;
     }
 
-    .device-tile.on .tile-state {
+    .calc-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      color: var(--text-color);
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s;
+    }
+
+    .calc-btn:active {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .calc-btn.operator {
+      background: rgba(56, 189, 248, 0.15);
       color: var(--accent-color);
+      border-color: rgba(56, 189, 248, 0.3);
+    }
+
+    .calc-btn.equals {
+      background: var(--accent-color);
+      color: #0f172a;
     }
   </style>
 </head>
@@ -521,8 +506,8 @@
 
         const winEl = document.createElement('div');
         winEl.className = 'window';
-        winEl.style.width = app.width || '520px';
-        winEl.style.height = app.height || '420px';
+        winEl.style.width = app.width || '360px';
+        winEl.style.height = app.height || '460px';
         
         const top = Math.max(20, (window.innerHeight - 54 - parseInt(winEl.style.height)) / 2);
         const left = Math.max(20, (window.innerWidth - parseInt(winEl.style.width)) / 2);
@@ -718,17 +703,14 @@
       document.getElementById('start-menu').classList.remove('open');
     });
 
-    // Kiosk & PIN Beveiliging Logica
     const pinModal = document.getElementById('pin-modal');
     const pinInput = document.getElementById('pinInput');
     const fullscreenBtn = document.getElementById('sys-fullscreen');
 
     fullscreenBtn.onclick = () => {
       if (!document.fullscreenElement) {
-        // Activeer fullscreen kiosk
         document.documentElement.requestFullscreen().catch(() => {});
       } else {
-        // Vraag om PIN om kiosk te verlaten
         pinModal.style.display = 'flex';
         pinInput.value = '';
         pinInput.focus();
@@ -758,82 +740,76 @@
     };
 
     /* ===================================================
-       APP 1: SMARTHOME KAMER BEDIENING (Tegels)
+       APP 1: CALCULATOR (Rekenmachine)
        =================================================== */
-    TabOS.registerApp('smarthome', {
-      title: 'Smart Home',
-      icon: '🏠',
-      width: '650px',
-      height: '480px',
+    TabOS.registerApp('calculator', {
+      title: 'Rekenmachine',
+      icon: '🧮',
+      width: '320px',
+      height: '420px',
       render: function(container) {
-        const rooms = {
-          "1 Woning": [
-            { id: 'l1', name: 'Hal lamp', type: 'light', icon: '💡', on: false },
-            { id: 'l2', name: 'Eetkamer 1', type: 'light', icon: '💡', on: true },
-            { id: 'l3', name: 'Woonkamer TV', type: 'tv', icon: '📺', on: false },
-            { id: 'ac1', name: 'Portable AC', type: 'ac', icon: '❄️', on: false, temp: '21°C' },
-            { id: 'th1', name: 'Thermostaat', type: 'thermostat', icon: '🌡️', on: true, temp: '20.5°C' },
-            { id: 'sp1', name: 'Speaker Kamer', type: 'speaker', icon: '🔊', on: false }
-          ],
-          "Keuken": [
-            { id: 'l4', name: 'Keuken lamp', type: 'light', icon: '💡', on: true },
-            { id: 'sp2', name: 'Keuken Speaker', type: 'speaker', icon: '🔊', on: false }
-          ],
-          "Buiten": [
-            { id: 'l5', name: 'Terras', type: 'light', icon: '💡', on: false },
-            { id: 'l6', name: 'Voordeur lamp', type: 'light', icon: '💡', on: false },
-            { id: 'l7', name: 'Garage lamp', type: 'light', icon: '💡', on: false }
-          ]
-        };
-
-        let currentRoom = Object.keys(rooms)[0];
-
-        function renderContent() {
-          container.innerHTML = `
-            <div class="smarthome-container">
-              <div class="room-tabs" id="room-tabs-container"></div>
-              <div class="tiles-grid" id="tiles-grid-container"></div>
+        container.innerHTML = `
+          <div class="calculator">
+            <div class="calc-screen" id="calcScreen">0</div>
+            <div class="calc-buttons">
+              <button class="calc-btn operator" data-action="clear">C</button>
+              <button class="calc-btn operator" data-value="(">(</button>
+              <button class="calc-btn operator" data-value=")">)</button>
+              <button class="calc-btn operator" data-value="/">÷</button>
+              
+              <button class="calc-btn" data-value="7">7</button>
+              <button class="calc-btn" data-value="8">8</button>
+              <button class="calc-btn" data-value="9">9</button>
+              <button class="calc-btn operator" data-value="*">×</button>
+              
+              <button class="calc-btn" data-value="4">4</button>
+              <button class="calc-btn" data-value="5">5</button>
+              <button class="calc-btn" data-value="6">6</button>
+              <button class="calc-btn operator" data-value="-">-</button>
+              
+              <button class="calc-btn" data-value="1">1</button>
+              <button class="calc-btn" data-value="2">2</button>
+              <button class="calc-btn" data-value="3">3</button>
+              <button class="calc-btn operator" data-value="+">+</button>
+              
+              <button class="calc-btn" data-value="0">0</button>
+              <button class="calc-btn" data-value=".">.</button>
+              <button class="calc-btn operator" data-action="back">⌫</button>
+              <button class="calc-btn equals" data-action="equals">=</button>
             </div>
-          `;
+          </div>
+        `;
 
-          const tabsContainer = container.querySelector('#room-tabs-container');
-          Object.keys(rooms).forEach(roomName => {
-            const tab = document.createElement('div');
-            tab.className = 'room-tab' + (roomName === currentRoom ? ' active' : '');
-            tab.innerText = roomName;
-            tab.onclick = () => {
-              currentRoom = roomName;
-              renderContent();
-            };
-            tabsContainer.appendChild(tab);
-          });
+        const screen = container.querySelector('#calcScreen');
+        let currentInput = '0';
 
-          const gridContainer = container.querySelector('#tiles-grid-container');
-          rooms[currentRoom].forEach(device => {
-            const tile = document.createElement('div');
-            tile.className = 'device-tile' + (device.on ? ' on' : '');
-            
-            let stateText = device.on ? 'Aan' : 'Uit';
-            if (device.temp) stateText = device.temp;
+        container.querySelectorAll('.calc-btn').forEach(btn => {
+          btn.onclick = () => {
+            const val = btn.getAttribute('data-value');
+            const action = btn.getAttribute('data-action');
 
-            tile.innerHTML = `
-              <div class="tile-icon">${device.icon}</div>
-              <div class="tile-info">
-                <div class="tile-name">${device.name}</div>
-                <div class="tile-state">${stateText}</div>
-              </div>
-            `;
+            if (action === 'clear') {
+              currentInput = '0';
+            } else if (action === 'back') {
+              currentInput = currentInput.length > 1 ? currentInput.slice(0, -1) : '0';
+            } else if (action === 'equals') {
+              try {
+                // Veilig berekenen via Function
+                currentInput = String(Function('"use strict";return (' + currentInput.replace(/×/g, '*').replace(/÷/g, '/') + ')')());
+              } catch {
+                currentInput = 'Fout';
+              }
+            } else if (val !== null) {
+              if (currentInput === '0' || currentInput === 'Fout') {
+                currentInput = val;
+              } else {
+                currentInput += val;
+              }
+            }
 
-            tile.onclick = () => {
-              device.on = !device.on;
-              renderContent();
-            };
-
-            gridContainer.appendChild(tile);
-          });
-        }
-
-        renderContent();
+            screen.innerText = currentInput;
+          };
+        });
       }
     });
 
