@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TabOS - Vocht Tracker Edition</title>
+  <title>TabOS - Tablet Edition</title>
   
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
@@ -80,6 +80,25 @@
       display: flex;
       align-items: center;
       gap: 14px;
+    }
+
+    .update-btn {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--accent-color);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.2s;
+    }
+
+    .update-btn:active {
+      background: rgba(56, 189, 248, 0.3);
     }
 
     /* Desktop Werkplek */
@@ -411,9 +430,7 @@
       color: #0f172a;
     }
 
-    /* ===================================================
-       VOCHT TRACKER APP STIJLEN (Positieve Insteek)
-       =================================================== */
+    /* Vocht Tracker App */
     .vocht-app {
       display: flex;
       flex-direction: column;
@@ -471,7 +488,6 @@
       flex-direction: column;
       align-items: center;
       gap: 6px;
-      transition: all 0.1s;
     }
 
     .vocht-btn:active {
@@ -500,17 +516,79 @@
       font-weight: 600;
       cursor: pointer;
     }
+
+    /* Rekenmachine */
+    .calculator {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      gap: 12px;
+    }
+
+    .calc-screen {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: right;
+      font-size: 32px;
+      font-weight: 600;
+      color: #fff;
+      word-break: break-all;
+      min-height: 75px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+    }
+
+    .calc-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      flex: 1;
+    }
+
+    .calc-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      color: var(--text-color);
+      font-size: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .calc-btn:active {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .calc-btn.operator {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent-color);
+      border-color: rgba(56, 189, 248, 0.3);
+    }
+
+    .calc-btn.equals {
+      background: var(--accent-color);
+      color: #0f172a;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Bovenbalk -->
+  <!-- Bovenbalk met Update/Ververs Knop -->
   <div id="topbar">
     <div class="topbar-left">
       <span>🖥️ TabOS</span>
       <span style="font-size:11px; opacity:0.6; font-weight:normal;">| Lenovo Tablet</span>
     </div>
     <div class="topbar-right">
+      <button class="update-btn" id="sys-refresh" title="Ververs OS naar nieuwste versie">
+        🔄 Update OS
+      </button>
       <span id="sys-wifi">🌐 Online</span>
       <span id="sys-battery">🔋 100%</span>
       <span id="sys-date" style="opacity:0.8;"></span>
@@ -559,7 +637,7 @@
   </div>
 
   <script>
-    /* Service Worker Registratie */
+    /* Service Worker & Cache wissen bij Update */
     if ('serviceWorker' in navigator) {
       const swCode = `
         self.addEventListener('install', (e) => self.skipWaiting());
@@ -569,6 +647,21 @@
       const blob = new Blob([swCode], { type: 'application/javascript' });
       navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
     }
+
+    // Update OS knop logica
+    document.getElementById('sys-refresh').onclick = () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          for(let reg of registrations) {
+            reg.unregister();
+          }
+        });
+      }
+      // Herlaad de pagina geforceerd vanaf de server (GitHub)
+      window.location.reload(true);
+      // Fallback als reload(true) genegeerd wordt door moderne browsers:
+      setTimeout(() => { window.location.href = window.location.href.split('?')[0] + '?v=' + Date.now(); }, 100);
+    };
 
     const TabOS = {
       apps: {},
@@ -789,7 +882,7 @@
       document.getElementById('start-menu').classList.remove('open');
     });
 
-    // Kiosk & Strenge Immersive Fullscreen Beveiliging (PIN = 8)
+    // Kiosk & PIN Beveiliging (PIN = 8)
     const pinModal = document.getElementById('pin-modal');
     const pinInput = document.getElementById('pinInput');
     const exitKioskBtn = document.getElementById('exit-kiosk-btn');
@@ -850,14 +943,12 @@
       }
     };
 
-    /* ===================================================
-       APP 1: VOCHT TRACKER (1000ml limiet - Positieve Insteek)
-       =================================================== */
+    // App 1: Vocht Tracker
     TabOS.registerApp('vochttracker', {
       title: 'Vocht Tracker',
       icon: '💧',
       width: '380px',
-      height: '460px',
+      height: '480px',
       render: function(container) {
         let totaalVocht = 0;
         const limiet = 1000;
@@ -937,9 +1028,7 @@
       }
     });
 
-    /* ===================================================
-       APP 2: CALCULATOR (Rekenmachine)
-       =================================================== */
+    // App 2: Rekenmachine
     TabOS.registerApp('calculator', {
       title: 'Rekenmachine',
       icon: '🧮',
