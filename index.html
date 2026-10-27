@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TabOS - Tablet Edition</title>
+  <title>TabOS - Vocht Tracker Edition</title>
   
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
@@ -47,7 +47,6 @@
       position: fixed;
       top: 0;
       left: 0;
-      /* Voorkomt dat het scherm kan scrollen of 'rubberbanden' bij de randen */
       overscroll-behavior: none;
     }
 
@@ -146,8 +145,8 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      min-width: 320px;
-      min-height: 400px;
+      min-width: 340px;
+      min-height: 420px;
       transition: transform 0.15s ease, opacity 0.15s ease;
     }
 
@@ -412,64 +411,94 @@
       color: #0f172a;
     }
 
-    /* Rekenmachine */
-    .calculator {
+    /* ===================================================
+       VOCHT TRACKER APP STIJLEN (Positieve Insteek)
+       =================================================== */
+    .vocht-app {
       display: flex;
       flex-direction: column;
+      gap: 16px;
       height: 100%;
-      gap: 12px;
     }
 
-    .calc-screen {
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid var(--card-border);
+    .vocht-header-card {
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
       border-radius: 12px;
       padding: 16px;
-      text-align: right;
+      text-align: center;
+    }
+
+    .vocht-totaal {
       font-size: 32px;
-      font-weight: 600;
-      color: #fff;
-      word-break: break-all;
-      min-height: 75px;
-      display: flex;
-      align-items: flex-end;
-      justify-content: flex-end;
+      font-weight: 700;
+      color: var(--accent-color);
+      margin: 4px 0;
     }
 
-    .calc-buttons {
+    .progress-bar-container {
+      width: 100%;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--success-color);
+      width: 0%;
+      transition: width 0.3s ease, background 0.3s ease;
+    }
+
+    .vocht-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 10px;
-      flex: 1;
     }
 
-    .calc-btn {
+    .vocht-btn {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--card-border);
       border-radius: 12px;
+      padding: 14px;
       color: var(--text-color);
-      font-size: 20px;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      transition: background 0.1s;
+      gap: 6px;
+      transition: all 0.1s;
     }
 
-    .calc-btn:active {
-      background: rgba(255, 255, 255, 0.2);
+    .vocht-btn:active {
+      transform: scale(0.97);
+      background: rgba(255, 255, 255, 0.15);
     }
 
-    .calc-btn.operator {
-      background: rgba(56, 189, 248, 0.15);
-      color: var(--accent-color);
-      border-color: rgba(56, 189, 248, 0.3);
+    .vocht-btn span {
+      font-size: 24px;
     }
 
-    .calc-btn.equals {
-      background: var(--accent-color);
-      color: #0f172a;
+    .vocht-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: auto;
+    }
+
+    .reset-btn {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -564,8 +593,8 @@
 
         const winEl = document.createElement('div');
         winEl.className = 'window';
-        winEl.style.width = app.width || '360px';
-        winEl.style.height = app.height || '460px';
+        winEl.style.width = app.width || '380px';
+        winEl.style.height = app.height || '480px';
         
         const top = Math.max(10, (window.innerHeight - 90 - parseInt(winEl.style.height)) / 2);
         const left = Math.max(10, (window.innerWidth - parseInt(winEl.style.width)) / 2);
@@ -768,7 +797,6 @@
 
     function enterKiosk() {
       if (!document.fullscreenElement) {
-        // Gebruik 'immersive' modus om Android randen te verbergen
         const element = document.documentElement;
         const requestFS = element.requestFullscreen || element.webkitRequestFullscreen;
         if (requestFS) {
@@ -822,7 +850,96 @@
       }
     };
 
-    // Standaard Rekenmachine App
+    /* ===================================================
+       APP 1: VOCHT TRACKER (1000ml limiet - Positieve Insteek)
+       =================================================== */
+    TabOS.registerApp('vochttracker', {
+      title: 'Vocht Tracker',
+      icon: '💧',
+      width: '380px',
+      height: '460px',
+      render: function(container) {
+        let totaalVocht = 0;
+        const limiet = 1000;
+
+        container.innerHTML = `
+          <div class="vocht-app">
+            <div class="vocht-header-card">
+              <div style="font-size: 13px; color: var(--text-muted);">Vandaag gedronken</div>
+              <div class="vocht-totaal" id="totaalVochtDisplay">0 ml</div>
+              <div style="font-size: 12px; color: var(--success-color);" id="statusBoodschap">Goed bezig! Ruimte over tot 1000 ml.</div>
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progressBar"></div>
+              </div>
+            </div>
+
+            <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Voeg vocht toe:</div>
+            
+            <div class="vocht-grid">
+              <button class="vocht-btn" data-ml="100">
+                <span>☕</span> Kopje / Glas (+100ml)
+              </button>
+              <button class="vocht-btn" data-ml="150">
+                <span>🍵</span> Grote Mok (+150ml)
+              </button>
+              <button class="vocht-btn" data-ml="250">
+                <span>🥛</span> Glas Water (+250ml)
+              </button>
+              <button class="vocht-btn" data-ml="500">
+                <span>🍼</span> Flesje (+500ml)
+              </button>
+            </div>
+
+            <div class="vocht-footer">
+              <span style="font-size: 12px; color: var(--text-muted);">Daglimiet: ${limiet} ml</span>
+              <button class="reset-btn" id="resetVocht">Reset dag</button>
+            </div>
+          </div>
+        `;
+
+        const totaalDisplay = container.querySelector('#totaalVochtDisplay');
+        const progressBar = container.querySelector('#progressBar');
+        const statusBoodschap = container.querySelector('#statusBoodschap');
+
+        function updateUI() {
+          totaalDisplay.innerText = totaalVocht + ' ml';
+          const percentage = Math.min(100, (totaalVocht / limiet) * 100);
+          progressBar.style.width = percentage + '%';
+
+          if (totaalVocht > limiet) {
+            progressBar.style.background = 'var(--danger-color)';
+            statusBoodschap.style.color = 'var(--danger-color)';
+            statusBoodschap.innerText = `Let op: je zit ${totaalVocht - limiet} ml over je limiet heen.`;
+          } else {
+            progressBar.style.background = 'var(--success-color)';
+            statusBoodschap.style.color = 'var(--success-color)';
+            const over = limiet - totaalVocht;
+            statusBoodschap.innerText = `Heel goed! Nog ${over} ml ruimte vandaag.`;
+          }
+        }
+
+        container.querySelectorAll('.vocht-btn').forEach(btn => {
+          btn.onclick = () => {
+            const ml = parseInt(btn.getAttribute('data-ml'));
+            totaalVocht += ml;
+            updateUI();
+          };
+        });
+
+        container.querySelector('#resetVocht').onclick = () => {
+          if (confirm('Wil je de teller voor vandaag weer op 0 ml zetten?')) {
+            totaalVocht = 0;
+            updateUI();
+          }
+        };
+
+        updateUI();
+      }
+    });
+
+    /* ===================================================
+       APP 2: CALCULATOR (Rekenmachine)
+       =================================================== */
     TabOS.registerApp('calculator', {
       title: 'Rekenmachine',
       icon: '🧮',
