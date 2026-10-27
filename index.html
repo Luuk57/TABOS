@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TabOS - Smart Home Edition</title>
+  <title>TabOS - Kiosk Edition</title>
   
   <!-- PWA Metadata -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -307,9 +307,71 @@
       background: rgba(255, 255, 255, 0.08);
     }
 
-    /* ===================================================
-       SMART HOME STYLES (Tegels & Kamers)
-       =================================================== */
+    /* PIN Modal */
+    #pin-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999999;
+    }
+
+    .pin-box {
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      padding: 24px;
+      border-radius: 16px;
+      text-align: center;
+      width: 280px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+
+    .pin-box h3 {
+      margin-bottom: 16px;
+      font-size: 16px;
+    }
+
+    .pin-input {
+      width: 100%;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 24px;
+      text-align: center;
+      padding: 10px;
+      margin-bottom: 16px;
+      letter-spacing: 8px;
+    }
+
+    .pin-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .pin-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .pin-btn.cancel {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+
+    .pin-btn.submit {
+      background: var(--accent-color);
+      color: #0f172a;
+    }
+
+    /* Smart Home */
     .smarthome-container {
       display: flex;
       flex-direction: column;
@@ -400,6 +462,18 @@
     <div class="start-menu-list" id="start-list"></div>
   </div>
 
+  <!-- PIN Beveiliging Modal -->
+  <div id="pin-modal">
+    <div class="pin-box">
+      <h3>Voer PIN in om Kiosk te verlaten</h3>
+      <input type="password" id="pinInput" class="pin-input" maxlength="4" placeholder="••••">
+      <div class="pin-buttons">
+        <button class="pin-btn cancel" id="pinCancel">Annuleer</button>
+        <button class="pin-btn submit" id="pinSubmit">Ontgrendel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Taskbar -->
   <div id="taskbar">
     <div class="taskbar-left">
@@ -415,7 +489,7 @@
         <span id="sys-wifi" title="Netwerk status">🌐</span>
         <span id="sys-battery" title="Accu status">🔋 100%</span>
         <span id="sys-clock">00:00</span>
-        <span id="sys-fullscreen" style="cursor:pointer;" title="Volledig scherm">⛶</span>
+        <span id="sys-fullscreen" style="cursor:pointer;" title="Volledig scherm / Kiosk">⛶</span>
       </div>
     </div>
   </div>
@@ -608,7 +682,7 @@
     };
 
     /* ===================================================
-       SYSTEEMSTATUS & UTILITIES
+       SYSTEEMSTATUS & BEVEILIGDE KIOSK MODUS
        =================================================== */
     function updateClock() {
       const d = new Date();
@@ -644,11 +718,42 @@
       document.getElementById('start-menu').classList.remove('open');
     });
 
-    document.getElementById('sys-fullscreen').onclick = () => {
+    // Kiosk & PIN Beveiliging Logica
+    const pinModal = document.getElementById('pin-modal');
+    const pinInput = document.getElementById('pinInput');
+    const fullscreenBtn = document.getElementById('sys-fullscreen');
+
+    fullscreenBtn.onclick = () => {
       if (!document.fullscreenElement) {
+        // Activeer fullscreen kiosk
         document.documentElement.requestFullscreen().catch(() => {});
       } else {
-        document.exitFullscreen().catch(() => {});
+        // Vraag om PIN om kiosk te verlaten
+        pinModal.style.display = 'flex';
+        pinInput.value = '';
+        pinInput.focus();
+      }
+    };
+
+    document.getElementById('pinSubmit').onclick = () => {
+      if (pinInput.value === '8') {
+        pinModal.style.display = 'none';
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+      } else {
+        alert('Onjuiste PIN!');
+        pinInput.value = '';
+      }
+    };
+
+    document.getElementById('pinCancel').onclick = () => {
+      pinModal.style.display = 'none';
+    };
+
+    pinInput.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        document.getElementById('pinSubmit').click();
       }
     };
 
@@ -661,7 +766,6 @@
       width: '650px',
       height: '480px',
       render: function(container) {
-        // Mock data van je kamers en apparaten
         const rooms = {
           "1 Woning": [
             { id: 'l1', name: 'Hal lamp', type: 'light', icon: '💡', on: false },
@@ -692,7 +796,6 @@
             </div>
           `;
 
-          // Render kamer tabbladen
           const tabsContainer = container.querySelector('#room-tabs-container');
           Object.keys(rooms).forEach(roomName => {
             const tab = document.createElement('div');
@@ -705,7 +808,6 @@
             tabsContainer.appendChild(tab);
           });
 
-          // Render tegels voor geselecteerde kamer
           const gridContainer = container.querySelector('#tiles-grid-container');
           rooms[currentRoom].forEach(device => {
             const tile = document.createElement('div');
@@ -736,7 +838,7 @@
     });
 
     /* ===================================================
-       APP 2: 1-FILE APP INSTALLER (Upload/Installeer Apps)
+       APP 2: 1-FILE APP INSTALLER
        =================================================== */
     TabOS.registerApp('installer', {
       title: 'App Installer',
@@ -747,7 +849,7 @@
         container.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:16px; height:100%;">
             <h3>Installeer 1-File App</h3>
-            <p style="font-size:13px; color:var(--text-muted);">Sleep hier een HTML-bestand of plak de code van je app om hem direct toe te voegen aan TabOS.</p>
+            <p style="font-size:13px; color:var(--text-muted);">Plak de code van je app om hem direct toe te voegen aan TabOS.</p>
             
             <textarea id="appCodeInput" placeholder="Plak hier je HTML/JS app code..." style="width:100%; flex:1; background:rgba(0,0,0,0.3); color:#fff; border:1px solid var(--card-border); border-radius:8px; padding:10px; font-family:monospace; font-size:12px; resize:none;"></textarea>
             
@@ -769,7 +871,6 @@
 
           const appId = 'custom_' + Date.now();
           
-          // Registreer dynamisch als nieuwe TabOS app
           TabOS.registerApp(appId, {
             title: name,
             icon: '🧩',
@@ -777,7 +878,6 @@
             height: '400px',
             render: function(appContainer) {
               appContainer.innerHTML = code;
-              // Voer eventuele script tags uit die in de code stonden
               const scripts = appContainer.querySelectorAll('script');
               scripts.forEach(s => {
                 const newScript = document.createElement('script');
@@ -787,7 +887,7 @@
             }
           });
 
-          alert(`App "${name}" is succesvol geïnstalleerd en toegevoegd aan je startmenu!`);
+          alert(`App "${name}" is succesvol geïnstalleerd!`);
         };
       }
     });
