@@ -143,7 +143,7 @@
   </div>
 
   <script>
-    // Firebase Configuratie uit jouw gegevens[span_2](start_span)[span_2](end_span)
+    // Firebase Configuratie
     const firebaseConfig = {
       apiKey: "AIzaSyDOj-x4BV4J1rkZ21R29D5KknkTaswWvw",
       authDomain: "tabos-vocht.firebaseapp.com",
@@ -249,7 +249,7 @@
     document.getElementById('pinCancel').onclick = () => pinModal.style.display = 'none';
 
     /* ===================================================
-       APP: VOCHT TRACKER (LIVE FIREBASE REAL-TIME SYNC)
+       APP: VOCHT TRACKER (LIVE TOTAAL + LIVE TEGELS SYNC)
        =================================================== */
     TabOS.registerApp('vochttracker', {
       title: 'Vocht Tracker', icon: '💧', width: '440px', height: '480px',
@@ -257,11 +257,11 @@
         const limiet = 1000;
         const vandaagDatum = new Date().toISOString().slice(0,10);
         const dbRef = db.ref('vocht_' + vandaagDatum);
+        const tegelsRef = db.ref('config_tegels');
 
         let totaalVocht = 0;
         let isEditMode = false;
-        
-        let tegels = JSON.parse(localStorage.getItem('tabos_tegels')) || [
+        let tegels = [
           { id: 't1', categorie: 'Drank', naam: 'Koffie', ml: 150, icon: '☕' },
           { id: 't2', categorie: 'Drank', naam: 'Thee', ml: 150, icon: '🍵' },
           { id: 't3', categorie: 'Drank', naam: 'Water', ml: 250, icon: '🥛' },
@@ -311,19 +311,25 @@
           }
         }
 
-        // Luister direct en live mee met Firebase (zodra Tab A of Tab B iets wijzigt, past dit scherm direct aan!)
+        // Live luisteren naar het totaal in Firebase
         dbRef.child('totaal').on('value', (snapshot) => {
           const val = snapshot.val();
           totaalVocht = val !== null ? Number(val) : 0;
           updateUI();
           statusMsg.innerText = "Live gesynchroniseerd ✅";
-        }, (error) => {
-          statusMsg.innerText = "Offline modus (lokale cache)";
         });
 
-        function saveTegelsLocal() {
-          localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
-        }
+        // Live luisteren naar de tegels in Firebase (zodra je op Tab A een tegel toevoegt/verwijdert, update Tab B direct mee)
+        tegelsRef.on('value', (snapshot) => {
+          const val = snapshot.val();
+          if (val) {
+            tegels = val;
+          } else {
+            // Als er nog geen tegels in Firebase staan, sla de standaard set op
+            tegelsRef.set(tegels);
+          }
+          renderTegels();
+        });
 
         function renderTegels() {
           tegelsGrid.innerHTML = '';
@@ -336,16 +342,12 @@
               if (isEditMode) {
                 if (e.target.classList.contains('delete-tegel') || confirm(`Tegel "${t.naam}" verwijderen?`)) {
                   tegels = tegels.filter(item => item.id !== t.id);
-                  saveTegelsLocal();
-                  renderTegels();
+                  tegelsRef.set(tegels); // Slaat direct op in Firebase voor alle apparaten
                 }
               } else {
-                // Tel direct op en stuur naar Firebase (Tab B ziet dit binnen een milliseconde verspringen!)
+                // Tel op en stuur naar Firebase
                 const nieuwTotaal = totaalVocht + t.ml;
-                dbRef.child('totaal').set(nieuwTotaal).catch(() => {
-                  totaalVocht = nieuwTotaal; // Fallback
-                  updateUI();
-                });
+                dbRef.child('totaal').set(nieuwTotaal);
               }
             };
             tegelsGrid.appendChild(btn);
@@ -362,8 +364,7 @@
             
             const newTegel = { id: 't_' + Date.now(), categorie: 'Drank', naam: naam, ml: ml, icon: icon };
             tegels.push(newTegel);
-            saveTegelsLocal();
-            renderTegels();
+            tegelsRef.set(tegels); // Direct live voor beide tablets!
           };
           tegelsGrid.appendChild(addBtn);
         }
@@ -379,8 +380,6 @@
             dbRef.child('totaal').set(0);
           }
         };
-
-        renderTegels();
       }
     });
 
