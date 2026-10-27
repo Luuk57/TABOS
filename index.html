@@ -73,14 +73,13 @@
     .pin-btn.cancel { background: rgba(255,255,255,0.1); color: #fff; }
     .pin-btn.submit { background: var(--accent-color); color: #0f172a; }
 
-    /* Vocht Tracker Componenten - Aangepast naar 4 kolommen */
+    /* Vocht Tracker Componenten - 4 Kolommen */
     .vocht-app { display: flex; flex-direction: column; gap: 14px; height: 100%; }
     .vocht-header-card { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 14px; text-align: center; }
     .vocht-totaal { font-size: 32px; font-weight: 700; color: var(--accent-color); }
     .progress-bar-container { width: 100%; height: 10px; background: rgba(255, 255, 255, 0.1); border-radius: 5px; overflow: hidden; margin-top: 8px; }
     .progress-bar-fill { height: 100%; background: var(--success-color); width: 0%; transition: width 0.3s; }
     
-    /* Hier ingesteld op EXACT 4 kolommen */
     .vocht-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-height: 240px; overflow-y: auto; padding-right: 4px; }
     
     .vocht-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-border); border-radius: 10px; padding: 10px 4px; color: var(--text-color); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; position: relative; text-align: center; }
@@ -229,10 +228,10 @@
     document.getElementById('pinCancel').onclick = () => pinModal.style.display = 'none';
 
     /* ===================================================
-       APP: VOCHT TRACKER (4 KOLOMMEN & LIVE SHEETS SYNC)
+       APP: VOCHT TRACKER (STRICT GOOGLE SHEETS SYNC)
        =================================================== */
     TabOS.registerApp('vochttracker', {
-      title: 'Vocht Tracker', icon: '💧', width: '440px', height: '520px',
+      title: 'Vocht Tracker', icon: '💧', width: '440px', height: '500px',
       render: function(container) {
         let scriptUrl = localStorage.getItem('google_sheet_script_url') || '';
         let limiet = 1000;
@@ -248,9 +247,9 @@
         container.innerHTML = `
           <div class="vocht-app">
             <div class="vocht-header-card">
-              <div style="font-size: 12px; color: var(--text-muted);">Vandaag gedronken (Gedeeld over apparaten)</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Vandaag gedronken (Live Sheets Sync)</div>
               <div class="vocht-totaal" id="totaalDisplay">0 ml</div>
-              <div style="font-size: 12px;" id="statusMsg">Bezig met verbinden...</div>
+              <div style="font-size: 12px;" id="statusMsg">Gegevens ophalen...</div>
               <div class="progress-bar-container"><div class="progress-bar-fill" id="pBar"></div></div>
             </div>
 
@@ -278,31 +277,30 @@
 
         function syncWithSheets() {
           if (!scriptUrl) {
-            statusMsg.innerText = "Geen Sheet URL ingesteld";
+            statusMsg.innerText = "Voer onderin je Google Sheet URL in!";
             updateUI();
             renderTegels();
             return;
           }
-          statusMsg.innerText = "Gegevens ophalen uit Google Sheets...";
+          statusMsg.innerText = "Synchroniseren met Sheets...";
           
           fetch(scriptUrl)
             .then(res => res.json())
             .then(data => {
               if (data.limiet) limiet = data.limiet;
               if (data.vandaagMl !== undefined) {
-                totaalVocht = data.vandaagMl;
+                totaalVocht = Number(data.vandaagMl) || 0;
               }
               if (data.tegels && data.tegels.length > 0) {
                 tegels = data.tegels;
                 localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
               }
-              statusMsg.innerText = "Live gesynchroniseerd ✅";
+              statusMsg.innerText = "Online & Synchroon ✅";
               renderTegels();
               updateUI();
             })
             .catch(() => {
-              statusMsg.innerText = "Offline modus";
-              renderTegels();
+              statusMsg.innerText = "Kan geen verbinding maken met Sheets ❌";
               updateUI();
             });
         }
@@ -347,16 +345,21 @@
                   renderTegels();
                 }
               } else {
-                totaalVocht += t.ml;
-                updateUI();
+                // Direct naar Google Sheet sturen en direct de nieuwe stand ophalen
+                statusMsg.innerText = "Inname opslaan...";
                 if (scriptUrl) {
                   fetch(scriptUrl, {
                     method: 'POST',
                     body: JSON.stringify({ action: 'add_intake', naam: t.naam, ml: t.ml, categorie: t.categorie || 'Drank' })
-                  }).then(() => {
-                    // Direct even opnieuw inlezen zodat Tab A en Tab B exact gelijk lopen
-                    setTimeout(syncWithSheets, 500);
-                  }).catch(() => {});
+                  })
+                  .then(() => syncWithSheets())
+                  .catch(() => {
+                    totaalVocht += t.ml; // Fallback lokaal
+                    updateUI();
+                  });
+                } else {
+                  totaalVocht += t.ml;
+                  updateUI();
                 }
               }
             };
