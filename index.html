@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TabOS - Google Sheets Edition</title>
+  <title>TabOS - Sheets Sync Edition</title>
   
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
@@ -85,7 +85,6 @@
     .vocht-btn .delete-tegel { position: absolute; top: 4px; right: 6px; color: #ef4444; font-size: 14px; display: none; }
     .edit-mode .delete-tegel { display: block; }
     .add-tegel-btn { background: rgba(56, 189, 248, 0.1); border: 1px dashed var(--accent-color); color: var(--accent-color); border-radius: 12px; padding: 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-    
     .sheet-input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 8px; color: #fff; padding: 8px; width: 100%; font-size: 12px; margin-top: 4px; }
   </style>
 </head>
@@ -227,15 +226,16 @@
     document.getElementById('pinCancel').onclick = () => pinModal.style.display = 'none';
 
     /* ===================================================
-       APP: VOCHT TRACKER (GOOGLE SHEETS INTEGRATIE)
+       APP: VOCHT TRACKER (GOOGLE SHEETS MET VEILIGE FALLBACK)
        =================================================== */
     TabOS.registerApp('vochttracker', {
       title: 'Vocht Tracker', icon: '💧', width: '400px', height: '520px',
       render: function(container) {
         let scriptUrl = localStorage.getItem('google_sheet_script_url') || '';
         let limiet = 1000;
-        let totaalVocht = 0;
+        let totaalVocht = parseInt(localStorage.getItem('tabos_vandaag_ml')) || 0;
         let isEditMode = false;
+        
         let tegels = JSON.parse(localStorage.getItem('tabos_tegels')) || [
           { id: 't1', categorie: 'Drank', naam: 'Koffie/Thee', ml: 150, icon: '☕' },
           { id: 't2', categorie: 'Drank', naam: 'Glas Water', ml: 250, icon: '🥛' },
@@ -246,12 +246,12 @@
           <div class="vocht-app">
             <div class="vocht-header-card">
               <div style="font-size: 12px; color: var(--text-muted);">Vandaag gedronken</div>
-              <div class="vocht-totaal" id="totaalDisplay">0 ml</div>
-              <div style="font-size: 12px;" id="statusMsg">Syncen met Google Sheets...</div>
+              <div class="vocht-totaal" id="totaalDisplay">${totaalVocht} ml</div>
+              <div style="font-size: 12px;" id="statusMsg">Klaar voor gebruik</div>
               <div class="progress-bar-container"><div class="progress-bar-fill" id="pBar"></div></div>
             </div>
 
-            <div style="display:flex; justify-between; align-items:center;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
               <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">TEGELS:</span>
               <button id="toggleEditTegels" style="background:none; border:none; color:var(--accent-color); font-size:12px; cursor:pointer;">⚙️ Tegels beheren</button>
             </div>
@@ -261,7 +261,7 @@
             <div style="margin-top:auto; padding-top:10px; border-top:1px solid var(--card-border);">
               <details style="font-size:12px; color:var(--text-muted);">
                 <summary style="cursor:pointer; margin-bottom:6px;">⚙️ Google Sheets Koppeling</summary>
-                <input type="text" id="sheetUrlInput" class="sheet-input-box" placeholder="Plak Web App URL van Google Apps Script..." value="${scriptUrl}">
+                <input type="text" id="sheetUrlInput" class="sheet-input-box" placeholder="Plak Web App URL..." value="${scriptUrl}">
                 <button id="saveSheetUrl" style="background:var(--accent-color); border:none; color:#0f172a; padding:6px 12px; border-radius:6px; font-weight:600; margin-top:6px; cursor:pointer; width:100%;">URL Opslaan & Syncen</button>
               </details>
             </div>
@@ -275,25 +275,32 @@
 
         function syncWithSheets() {
           if (!scriptUrl) {
-            statusMsg.innerText = "Voer onderin je Google Apps Script URL in om te syncen!";
+            statusMsg.innerText = "Werkt lokaal (Geen Sheet URL ingesteld)";
             updateUI();
+            renderTegels();
             return;
           }
-          statusMsg.innerText = "Bezig met ophalen uit Google Sheets...";
+          statusMsg.innerText = "Gegevens ophalen uit Google Sheets...";
+          
           fetch(scriptUrl)
             .then(res => res.json())
             .then(data => {
               if (data.limiet) limiet = data.limiet;
-              if (data.vandaagMl !== undefined) totaalVocht = data.vandaagMl;
+              if (data.vandaagMl !== undefined) {
+                totaalVocht = data.vandaagMl;
+                localStorage.setItem('tabos_vandaag_ml', totaalVocht);
+              }
               if (data.tegels && data.tegels.length > 0) {
                 tegels = data.tegels;
                 localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
               }
+              statusMsg.innerText = "Gesynchroniseerd met Sheets ✅";
               renderTegels();
               updateUI();
             })
             .catch(() => {
-              statusMsg.innerText = "Offline modus (Geen verbinding met Sheets).";
+              statusMsg.innerText = "Offline modus (Lokale data geladen)";
+              renderTegels();
               updateUI();
             });
         }
@@ -309,16 +316,18 @@
 
         function updateUI() {
           totaalDisplay.innerText = totaalVocht + ' ml';
+          localStorage.setItem('tabos_vandaag_ml', totaalVocht);
           const pct = Math.min(100, (totaalVocht / limiet) * 100);
           pBar.style.width = pct + '%';
+          
           if (totaalVocht > limiet) {
             pBar.style.background = 'var(--danger-color)';
             statusMsg.style.color = 'var(--danger-color)';
-            statusMsg.innerText = `Let op: ${totaalVocht - limiet} ml over de limiet van ${limiet}ml!`;
+            statusMsg.innerText = `Let op: ${totaalVocht - limiet} ml over de limiet!`;
           } else {
             pBar.style.background = 'var(--success-color)';
             statusMsg.style.color = 'var(--success-color)';
-            statusMsg.innerText = `Goed bezig! Nog ${limiet - totaalVocht} ml over van de ${limiet}ml.`;
+            statusMsg.innerText = `Nog ${limiet - totaalVocht} ml over van ${limiet}ml.`;
           }
         }
 
@@ -380,7 +389,6 @@
           syncWithSheets();
         };
 
-        renderTegels();
         syncWithSheets();
       }
     });
