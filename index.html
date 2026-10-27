@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TabOS - Tablet Edition</title>
+  <title>TabOS - Google Sheets Edition</title>
   
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
@@ -19,7 +19,6 @@
       --taskbar-bg: rgba(15, 23, 42, 0.95);
       --topbar-bg: rgba(15, 23, 42, 0.95);
       --accent-color: #38bdf8;
-      --accent-glow: rgba(56, 189, 248, 0.3);
       --text-color: #f8fafc;
       --text-muted: #94a3b8;
       --danger-color: #ef4444;
@@ -28,586 +27,92 @@
       --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body, html { width: 100vw; height: 100vh; overflow: hidden; font-family: var(--font-family); background: #090d16; color: var(--text-color); position: fixed; top: 0; left: 0; overscroll-behavior: none; }
 
-    body, html {
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      font-family: var(--font-family);
-      background: #090d16;
-      color: var(--text-color);
-      position: fixed;
-      top: 0;
-      left: 0;
-      overscroll-behavior: none;
-    }
+    #topbar { position: absolute; top: 0; left: 0; right: 0; height: 36px; background: var(--topbar-bg); border-bottom: 1px solid var(--card-border); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 13px; font-weight: 500; z-index: 99999; }
+    .topbar-left { display: flex; align-items: center; gap: 12px; color: var(--accent-color); font-weight: 700; }
+    .topbar-right { display: flex; align-items: center; gap: 14px; }
+    .update-btn { background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: var(--accent-color); padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
 
-    /* Bovenbalk Statusbar */
-    #topbar {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 36px;
-      background: var(--topbar-bg);
-      border-bottom: 1px solid var(--card-border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 16px;
-      font-size: 13px;
-      font-weight: 500;
-      z-index: 99999;
-    }
+    #desktop { position: absolute; top: 36px; left: 0; right: 0; bottom: 54px; background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); overflow: hidden; }
+    .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 20px; padding: 24px; max-width: 700px; }
+    .desktop-icon { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px 12px; border-radius: 16px; cursor: pointer; background: rgba(255, 255, 255, 0.03); }
+    .desktop-icon:active { transform: scale(0.95); background: rgba(255, 255, 255, 0.1); }
+    .desktop-icon .icon { font-size: 44px; margin-bottom: 8px; }
+    .desktop-icon .label { font-size: 13px; font-weight: 500; text-align: center; color: var(--text-color); }
 
-    .topbar-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      color: var(--accent-color);
-      font-weight: 700;
-    }
+    .window { position: absolute; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(16px); border: 1px solid var(--card-border); border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden; min-width: 340px; min-height: 420px; }
+    .window.minimized { opacity: 0; transform: scale(0.8) translateY(100px); pointer-events: none; }
+    .window.maximized { top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; border-radius: 0; }
+    .window-header { height: 48px; background: var(--window-header-bg); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid var(--card-border); cursor: move; touch-action: none; }
+    .window-title { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
+    .window-controls { display: flex; gap: 10px; }
+    .win-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(255, 255, 255, 0.1); color: var(--text-color); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; }
+    .win-btn.close:active { background: var(--danger-color); }
+    .window-body { flex: 1; overflow: auto; padding: 16px; position: relative; }
 
-    .topbar-right {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
+    #taskbar { position: absolute; bottom: 0; left: 0; right: 0; height: 54px; background: var(--taskbar-bg); border-top: 1px solid var(--card-border); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; z-index: 99999; }
+    .taskbar-left, .taskbar-right { display: flex; align-items: center; gap: 8px; }
+    .taskbar-center { display: flex; align-items: center; gap: 6px; overflow-x: auto; }
+    .start-btn { background: var(--accent-color); color: #0f172a; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; }
+    .taskbar-item { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-border); padding: 6px 12px; border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .taskbar-item.active { background: rgba(255, 255, 255, 0.15); border-color: var(--accent-color); }
+    .exit-kiosk-btn { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; }
 
-    .update-btn {
-      background: rgba(56, 189, 248, 0.15);
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      color: var(--accent-color);
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      transition: background 0.2s;
-    }
+    #start-menu { position: absolute; bottom: 64px; left: 12px; width: 300px; background: rgba(30, 41, 59, 0.98); border: 1px solid var(--card-border); border-radius: 16px; padding: 16px; display: none; z-index: 100000; }
+    #start-menu.open { display: block; }
+    .start-menu-header { font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; }
+    .start-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 14px; }
 
-    .update-btn:active {
-      background: rgba(56, 189, 248, 0.3);
-    }
+    #pin-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); display: none; align-items: center; justify-content: center; z-index: 999999; }
+    .pin-box { background: #1e293b; border: 1px solid var(--card-border); padding: 24px; border-radius: 16px; text-align: center; width: 300px; }
+    .pin-input { width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 8px; color: #fff; font-size: 24px; text-align: center; padding: 12px; margin-bottom: 16px; }
+    .pin-buttons { display: flex; gap: 10px; }
+    .pin-btn { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; }
+    .pin-btn.cancel { background: rgba(255,255,255,0.1); color: #fff; }
+    .pin-btn.submit { background: var(--accent-color); color: #0f172a; }
 
-    /* Desktop Werkplek */
-    #desktop {
-      position: absolute;
-      top: 36px;
-      left: 0;
-      right: 0;
-      bottom: 54px;
-      background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
-      overflow: hidden;
-    }
-
-    /* Desktop App Grid */
-    .app-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-      gap: 20px;
-      padding: 24px;
-      max-width: 700px;
-    }
-
-    .desktop-icon {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 16px 12px;
-      border-radius: 16px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid transparent;
-    }
-
-    .desktop-icon:active {
-      transform: scale(0.95);
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    .desktop-icon .icon {
-      font-size: 44px;
-      margin-bottom: 8px;
-    }
-
-    .desktop-icon .label {
-      font-size: 13px;
-      font-weight: 500;
-      text-align: center;
-      color: var(--text-color);
-      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-    }
-
-    /* Vensters */
-    .window {
-      position: absolute;
-      background: rgba(30, 41, 59, 0.95);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      min-width: 340px;
-      min-height: 420px;
-      transition: transform 0.15s ease, opacity 0.15s ease;
-    }
-
-    .window.minimized {
-      opacity: 0;
-      transform: scale(0.8) translateY(100px);
-      pointer-events: none;
-    }
-
-    .window.maximized {
-      top: 0 !important;
-      left: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      border-radius: 0;
-    }
-
-    .window-header {
-      height: 48px;
-      background: var(--window-header-bg);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 16px;
-      border-bottom: 1px solid var(--card-border);
-      cursor: move;
-      touch-action: none;
-    }
-
-    .window-title {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .window-controls {
-      display: flex;
-      gap: 10px;
-    }
-
-    .win-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: none;
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--text-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      cursor: pointer;
-    }
-
-    .win-btn:active {
-      background: rgba(255, 255, 255, 0.2);
-    }
-
-    .win-btn.close:active {
-      background: var(--danger-color);
-    }
-
-    .window-body {
-      flex: 1;
-      overflow: auto;
-      padding: 16px;
-      position: relative;
-      user-select: text;
-      -webkit-user-select: text;
-    }
-
-    /* Onderbalk Taakbalk */
-    #taskbar {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 54px;
-      background: var(--taskbar-bg);
-      border-top: 1px solid var(--card-border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 12px;
-      z-index: 99999;
-    }
-
-    .taskbar-left, .taskbar-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .taskbar-center {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      overflow-x: auto;
-    }
-
-    .start-btn {
-      background: var(--accent-color);
-      color: #0f172a;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-    }
-
-    .taskbar-item {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--card-border);
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 13px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      max-width: 140px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .taskbar-item.active {
-      background: rgba(255, 255, 255, 0.15);
-      border-color: var(--accent-color);
-    }
-
-    .exit-kiosk-btn {
-      background: rgba(239, 68, 68, 0.2);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      color: #fca5a5;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    /* Start Menu */
-    #start-menu {
-      position: absolute;
-      bottom: 64px;
-      left: 12px;
-      width: 300px;
-      background: rgba(30, 41, 59, 0.98);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      display: none;
-      z-index: 100000;
-    }
-
-    #start-menu.open {
-      display: block;
-    }
-
-    .start-menu-header {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-
-    .start-menu-list {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .start-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .start-item:hover, .start-item:active {
-      background: rgba(255, 255, 255, 0.08);
-    }
-
-    /* PIN Modal */
-    #pin-modal {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(12px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 999999;
-    }
-
-    .pin-box {
-      background: #1e293b;
-      border: 1px solid var(--card-border);
-      padding: 24px;
-      border-radius: 16px;
-      text-align: center;
-      width: 300px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-    }
-
-    .pin-box h3 {
-      margin-bottom: 16px;
-      font-size: 16px;
-    }
-
-    .pin-input {
-      width: 100%;
-      background: rgba(0,0,0,0.3);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      color: #fff;
-      font-size: 24px;
-      text-align: center;
-      padding: 12px;
-      margin-bottom: 16px;
-      letter-spacing: 8px;
-    }
-
-    .pin-buttons {
-      display: flex;
-      gap: 10px;
-    }
-
-    .pin-btn {
-      flex: 1;
-      padding: 12px;
-      border-radius: 8px;
-      border: none;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .pin-btn.cancel {
-      background: rgba(255,255,255,0.1);
-      color: #fff;
-    }
-
-    .pin-btn.submit {
-      background: var(--accent-color);
-      color: #0f172a;
-    }
-
-    /* Vocht Tracker App */
-    .vocht-app {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      height: 100%;
-    }
-
-    .vocht-header-card {
-      background: rgba(56, 189, 248, 0.1);
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      border-radius: 12px;
-      padding: 16px;
-      text-align: center;
-    }
-
-    .vocht-totaal {
-      font-size: 32px;
-      font-weight: 700;
-      color: var(--accent-color);
-      margin: 4px 0;
-    }
-
-    .progress-bar-container {
-      width: 100%;
-      height: 10px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 5px;
-      overflow: hidden;
-      margin-top: 10px;
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      background: var(--success-color);
-      width: 0%;
-      transition: width 0.3s ease, background 0.3s ease;
-    }
-
-    .vocht-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-
-    .vocht-btn {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 14px;
-      color: var(--text-color);
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .vocht-btn:active {
-      transform: scale(0.97);
-      background: rgba(255, 255, 255, 0.15);
-    }
-
-    .vocht-btn span {
-      font-size: 24px;
-    }
-
-    .vocht-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: auto;
-    }
-
-    .reset-btn {
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #fca5a5;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    /* Rekenmachine */
-    .calculator {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      gap: 12px;
-    }
-
-    .calc-screen {
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      padding: 16px;
-      text-align: right;
-      font-size: 32px;
-      font-weight: 600;
-      color: #fff;
-      word-break: break-all;
-      min-height: 75px;
-      display: flex;
-      align-items: flex-end;
-      justify-content: flex-end;
-    }
-
-    .calc-buttons {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      flex: 1;
-    }
-
-    .calc-btn {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      color: var(--text-color);
-      font-size: 20px;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .calc-btn:active {
-      background: rgba(255, 255, 255, 0.2);
-    }
-
-    .calc-btn.operator {
-      background: rgba(56, 189, 248, 0.15);
-      color: var(--accent-color);
-      border-color: rgba(56, 189, 248, 0.3);
-    }
-
-    .calc-btn.equals {
-      background: var(--accent-color);
-      color: #0f172a;
-    }
+    /* Vocht Tracker Componenten */
+    .vocht-app { display: flex; flex-direction: column; gap: 14px; height: 100%; }
+    .vocht-header-card { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 14px; text-align: center; }
+    .vocht-totaal { font-size: 32px; font-weight: 700; color: var(--accent-color); }
+    .progress-bar-container { width: 100%; height: 10px; background: rgba(255, 255, 255, 0.1); border-radius: 5px; overflow: hidden; margin-top: 8px; }
+    .progress-bar-fill { height: 100%; background: var(--success-color); width: 0%; transition: width 0.3s; }
+    .vocht-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-height: 220px; overflow-y: auto; }
+    .vocht-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; color: var(--text-color); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; }
+    .vocht-btn:active { transform: scale(0.97); background: rgba(255, 255, 255, 0.15); }
+    .vocht-btn .delete-tegel { position: absolute; top: 4px; right: 6px; color: #ef4444; font-size: 14px; display: none; }
+    .edit-mode .delete-tegel { display: block; }
+    .add-tegel-btn { background: rgba(56, 189, 248, 0.1); border: 1px dashed var(--accent-color); color: var(--accent-color); border-radius: 12px; padding: 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    
+    .sheet-input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 8px; color: #fff; padding: 8px; width: 100%; font-size: 12px; margin-top: 4px; }
   </style>
 </head>
 <body>
 
-  <!-- Bovenbalk met Update/Ververs Knop -->
   <div id="topbar">
     <div class="topbar-left">
       <span>🖥️ TabOS</span>
-      <span style="font-size:11px; opacity:0.6; font-weight:normal;">| Lenovo Tablet</span>
+      <span style="font-size:11px; opacity:0.6;">| Lenovo Tablet</span>
     </div>
     <div class="topbar-right">
-      <button class="update-btn" id="sys-refresh" title="Ververs OS naar nieuwste versie">
-        🔄 Update OS
-      </button>
+      <button class="update-btn" id="sys-refresh">🔄 Update OS</button>
       <span id="sys-wifi">🌐 Online</span>
       <span id="sys-battery">🔋 100%</span>
-      <span id="sys-date" style="opacity:0.8;"></span>
       <span id="sys-clock" style="font-weight:700; color:var(--accent-color);">00:00</span>
     </div>
   </div>
 
-  <!-- Desktop -->
   <div id="desktop">
     <div class="app-grid" id="desktop-grid"></div>
   </div>
 
-  <!-- Start Menu -->
   <div id="start-menu">
     <div class="start-menu-header">Applicaties</div>
     <div class="start-menu-list" id="start-list"></div>
   </div>
 
-  <!-- PIN Modal -->
   <div id="pin-modal">
     <div class="pin-box">
       <h3>Voer PIN in (8)</h3>
@@ -619,25 +124,17 @@
     </div>
   </div>
 
-  <!-- Onderbalk -->
   <div id="taskbar">
     <div class="taskbar-left">
-      <button class="start-btn" id="start-btn">
-        <span>⚡</span> Start
-      </button>
+      <button class="start-btn" id="start-btn">⚡ Start</button>
     </div>
-
     <div class="taskbar-center" id="taskbar-apps"></div>
-
     <div class="taskbar-right">
-      <button class="exit-kiosk-btn" id="exit-kiosk-btn" title="Verlaat Kiosk">
-        🔒 Kiosk Sluiten
-      </button>
+      <button class="exit-kiosk-btn" id="exit-kiosk-btn">🔒 Kiosk Sluiten</button>
     </div>
   </div>
 
   <script>
-    /* Service Worker & Cache wissen bij Update */
     if ('serviceWorker' in navigator) {
       const swCode = `
         self.addEventListener('install', (e) => self.skipWaiting());
@@ -648,454 +145,251 @@
       navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
     }
 
-    // Update OS knop logica
     document.getElementById('sys-refresh').onclick = () => {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-          for(let reg of registrations) {
-            reg.unregister();
-          }
-        });
+        navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
       }
-      // Herlaad de pagina geforceerd vanaf de server (GitHub)
       window.location.reload(true);
-      // Fallback als reload(true) genegeerd wordt door moderne browsers:
-      setTimeout(() => { window.location.href = window.location.href.split('?')[0] + '?v=' + Date.now(); }, 100);
     };
 
     const TabOS = {
-      apps: {},
-      windows: {},
-      activeZIndex: 100,
-
-      registerApp(id, config) {
-        this.apps[id] = config;
-        this.renderDesktopIcons();
-        this.renderStartMenuItems();
-      },
-
+      apps: {}, windows: {}, activeZIndex: 100,
+      registerApp(id, config) { this.apps[id] = config; this.renderDesktopIcons(); this.renderStartMenuItems(); },
       openApp(id) {
-        if (this.windows[id]) {
-          this.focusWindow(id);
-          this.windows[id].element.classList.remove('minimized');
-          return;
-        }
-
-        const app = this.apps[id];
-        if (!app) return;
-
+        if (this.windows[id]) { this.focusWindow(id); this.windows[id].element.classList.remove('minimized'); return; }
+        const app = this.apps[id]; if (!app) return;
         const winEl = document.createElement('div');
         winEl.className = 'window';
-        winEl.style.width = app.width || '380px';
-        winEl.style.height = app.height || '480px';
-        
-        const top = Math.max(10, (window.innerHeight - 90 - parseInt(winEl.style.height)) / 2);
-        const left = Math.max(10, (window.innerWidth - parseInt(winEl.style.width)) / 2);
-        winEl.style.top = top + 'px';
-        winEl.style.left = left + 'px';
-
-        winEl.innerHTML = `
-          <div class="window-header">
-            <div class="window-title">
-              <span>${app.icon}</span>
-              <span>${app.title}</span>
-            </div>
-            <div class="window-controls">
-              <button class="win-btn min">—</button>
-              <button class="win-btn max">□</button>
-              <button class="win-btn close">✕</button>
-            </div>
-          </div>
-          <div class="window-body"></div>
-        `;
-
+        winEl.style.width = app.width || '380px'; winEl.style.height = app.height || '480px';
+        winEl.style.top = Math.max(10, (window.innerHeight - 90 - parseInt(winEl.style.height)) / 2) + 'px';
+        winEl.style.left = Math.max(10, (window.innerWidth - parseInt(winEl.style.width)) / 2) + 'px';
+        winEl.innerHTML = `<div class="window-header"><div class="window-title"><span>${app.icon}</span><span>${app.title}</span></div><div class="window-controls"><button class="win-btn min">—</button><button class="win-btn max">□</button><button class="win-btn close">✕</button></div></div><div class="window-body"></div>`;
         document.getElementById('desktop').appendChild(winEl);
-
-        const winData = { id: id, element: winEl, isMaximized: false };
+        const winData = { id: id, element: winEl };
         this.windows[id] = winData;
-
-        const bodyEl = winEl.querySelector('.window-body');
-        if (typeof app.render === 'function') {
-          app.render(bodyEl);
-        }
-
+        app.render(winEl.querySelector('.window-body'));
         this.setupWindowEvents(winData);
-        this.focusWindow(id);
-        this.updateTaskbar();
+        this.focusWindow(id); this.updateTaskbar();
         document.getElementById('start-menu').classList.remove('open');
       },
-
-      focusWindow(id) {
-        const win = this.windows[id];
-        if (!win) return;
-        this.activeZIndex++;
-        win.element.style.zIndex = this.activeZIndex;
-        this.updateTaskbar();
-      },
-
-      closeWindow(id) {
-        const win = this.windows[id];
-        if (!win) return;
-        win.element.remove();
-        delete this.windows[id];
-        this.updateTaskbar();
-      },
-
-      toggleMinimize(id) {
-        const win = this.windows[id];
-        if (!win) return;
-        win.element.classList.toggle('minimized');
-      },
-
-      toggleMaximize(id) {
-        const win = this.windows[id];
-        if (!win) return;
-        win.isMaximized = !win.isMaximized;
-        win.element.classList.toggle('maximized', win.isMaximized);
-      },
-
+      focusWindow(id) { const win = this.windows[id]; if (!win) return; this.activeZIndex++; win.element.style.zIndex = this.activeZIndex; this.updateTaskbar(); },
+      closeWindow(id) { if (this.windows[id]) { this.windows[id].element.remove(); delete this.windows[id]; this.updateTaskbar(); } },
+      toggleMinimize(id) { if (this.windows[id]) this.windows[id].element.classList.toggle('minimized'); },
+      toggleMaximize(id) { if (this.windows[id]) this.windows[id].element.classList.toggle('maximized'); },
       setupWindowEvents(winData) {
-        const el = winData.element;
-        const header = el.querySelector('.window-header');
-
+        const el = winData.element; const header = el.querySelector('.window-header');
         el.addEventListener('pointerdown', () => this.focusWindow(winData.id));
-
         header.querySelector('.min').onclick = (e) => { e.stopPropagation(); this.toggleMinimize(winData.id); };
         header.querySelector('.max').onclick = (e) => { e.stopPropagation(); this.toggleMaximize(winData.id); };
         header.querySelector('.close').onclick = (e) => { e.stopPropagation(); this.closeWindow(winData.id); };
-
-        let isDragging = false;
-        let startX, startY, initialLeft, initialTop;
-
-        const onPointerDown = (e) => {
-          if (winData.isMaximized) return;
-          isDragging = true;
-          startX = e.clientX || e.touches?.[0].clientX;
-          startY = e.clientY || e.touches?.[0].clientY;
-          initialLeft = el.offsetLeft;
-          initialTop = el.offsetTop;
-          
-          document.addEventListener('pointermove', onPointerMove);
-          document.addEventListener('pointerup', onPointerUp);
-        };
-
-        const onPointerMove = (e) => {
-          if (!isDragging) return;
-          const currentX = e.clientX || e.touches?.[0].clientX;
-          const currentY = e.clientY || e.touches?.[0].clientY;
-          el.style.left = (initialLeft + (currentX - startX)) + 'px';
-          el.style.top = (initialTop + (currentY - startY)) + 'px';
-        };
-
-        const onPointerUp = () => {
-          isDragging = false;
-          document.removeEventListener('pointermove', onPointerMove);
-          document.removeEventListener('pointerup', onPointerUp);
-        };
-
-        header.addEventListener('pointerdown', onPointerDown);
       },
-
       renderDesktopIcons() {
-        const grid = document.getElementById('desktop-grid');
-        grid.innerHTML = '';
+        const grid = document.getElementById('desktop-grid'); grid.innerHTML = '';
         Object.keys(this.apps).forEach(id => {
-          const app = this.apps[id];
-          const iconEl = document.createElement('div');
-          iconEl.className = 'desktop-icon';
+          const app = this.apps[id]; const iconEl = document.createElement('div'); iconEl.className = 'desktop-icon';
           iconEl.innerHTML = `<div class="icon">${app.icon}</div><div class="label">${app.title}</div>`;
-          iconEl.onclick = () => this.openApp(id);
-          grid.appendChild(iconEl);
+          iconEl.onclick = () => this.openApp(id); grid.appendChild(iconEl);
         });
       },
-
       renderStartMenuItems() {
-        const list = document.getElementById('start-list');
-        list.innerHTML = '';
+        const list = document.getElementById('start-list'); list.innerHTML = '';
         Object.keys(this.apps).forEach(id => {
-          const app = this.apps[id];
-          const itemEl = document.createElement('div');
-          itemEl.className = 'start-item';
-          itemEl.innerHTML = `<span style="font-size: 20px;">${app.icon}</span><span>${app.title}</span>`;
-          itemEl.onclick = () => this.openApp(id);
-          list.appendChild(itemEl);
+          const app = this.apps[id]; const itemEl = document.createElement('div'); itemEl.className = 'start-item';
+          itemEl.innerHTML = `<span style="font-size:20px;">${app.icon}</span><span>${app.title}</span>`;
+          itemEl.onclick = () => this.openApp(id); list.appendChild(itemEl);
         });
       },
-
       updateTaskbar() {
-        const container = document.getElementById('taskbar-apps');
-        container.innerHTML = '';
+        const container = document.getElementById('taskbar-apps'); container.innerHTML = '';
         Object.keys(this.windows).forEach(id => {
-          const win = this.windows[id];
-          const app = this.apps[id];
-          const item = document.createElement('div');
+          const win = this.windows[id]; const app = this.apps[id]; const item = document.createElement('div');
           item.className = 'taskbar-item' + (parseInt(win.element.style.zIndex) === this.activeZIndex ? ' active' : '');
           item.innerHTML = `<span>${app.icon}</span><span>${app.title}</span>`;
-          item.onclick = () => {
-            if (win.element.classList.contains('minimized')) {
-              win.element.classList.remove('minimized');
-              this.focusWindow(id);
-            } else if (parseInt(win.element.style.zIndex) === this.activeZIndex) {
-              this.toggleMinimize(id);
-            } else {
-              this.focusWindow(id);
-            }
-          };
+          item.onclick = () => { if (win.element.classList.contains('minimized')) { win.element.classList.remove('minimized'); this.focusWindow(id); } else { this.toggleMinimize(id); } };
           container.appendChild(item);
         });
       }
     };
 
-    // Systeem Klok & Accu
-    function updateClockAndDate() {
-      const d = new Date();
-      document.getElementById('sys-clock').innerText = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      document.getElementById('sys-date').innerText = d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
-    }
-    setInterval(updateClockAndDate, 1000);
-    updateClockAndDate();
+    function updateClock() { document.getElementById('sys-clock').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+    setInterval(updateClock, 1000); updateClock();
 
-    if ('getBattery' in navigator) {
-      navigator.getBattery().then(battery => {
-        const updateBat = () => {
-          const level = Math.round(battery.level * 100);
-          document.getElementById('sys-battery').innerText = `${battery.charging ? '⚡' : '🔋'} ${level}%`;
-        };
-        updateBat();
-        battery.addEventListener('levelchange', updateBat);
-        battery.addEventListener('chargingchange', updateBat);
-      });
-    }
+    document.getElementById('start-btn').onclick = (e) => { e.stopPropagation(); document.getElementById('start-menu').classList.toggle('open'); };
+    document.addEventListener('click', () => document.getElementById('start-menu').classList.remove('open'));
 
-    function updateOnlineStatus() {
-      document.getElementById('sys-wifi').innerText = navigator.onLine ? '🌐 Online' : '📡 Offline';
-    }
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
-    updateOnlineStatus();
-
-    document.getElementById('start-btn').onclick = (e) => {
-      e.stopPropagation();
-      document.getElementById('start-menu').classList.toggle('open');
-    };
-    document.addEventListener('click', () => {
-      document.getElementById('start-menu').classList.remove('open');
-    });
-
-    // Kiosk & PIN Beveiliging (PIN = 8)
-    const pinModal = document.getElementById('pin-modal');
-    const pinInput = document.getElementById('pinInput');
-    const exitKioskBtn = document.getElementById('exit-kiosk-btn');
-    let kioskActive = false;
-
-    function enterKiosk() {
-      if (!document.fullscreenElement) {
-        const element = document.documentElement;
-        const requestFS = element.requestFullscreen || element.webkitRequestFullscreen;
-        if (requestFS) {
-          requestFS.call(element, { navigationUI: "hide" }).then(() => {
-            kioskActive = true;
-          }).catch(() => {});
-        }
-      }
-    }
-
-    document.body.addEventListener('click', enterKiosk, { once: true });
-    document.body.addEventListener('touchstart', enterKiosk, { once: true });
-
-    exitKioskBtn.onclick = () => {
-      pinModal.style.display = 'flex';
-      pinInput.value = '';
-      pinInput.focus();
-    };
-
-    document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && kioskActive) {
-        pinModal.style.display = 'flex';
-        pinInput.value = '';
-        pinInput.focus();
-      }
-    });
-
+    // Kiosk PIN = 8
+    const pinModal = document.getElementById('pin-modal'); const pinInput = document.getElementById('pinInput');
+    document.getElementById('exit-kiosk-btn').onclick = () => { pinModal.style.display = 'flex'; pinInput.value = ''; pinInput.focus(); };
     document.getElementById('pinSubmit').onclick = () => {
-      if (pinInput.value === '8') {
-        kioskActive = false;
-        pinModal.style.display = 'none';
-        if (document.fullscreenElement) {
-          document.exitFullscreen().catch(() => {});
-        }
-      } else {
-        alert('Onjuiste PIN!');
-        pinInput.value = '';
-      }
+      if (pinInput.value === '8') { pinModal.style.display = 'none'; if (document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }
+      else { alert('Onjuiste PIN!'); pinInput.value = ''; }
     };
+    document.getElementById('pinCancel').onclick = () => pinModal.style.display = 'none';
 
-    document.getElementById('pinCancel').onclick = () => {
-      pinModal.style.display = 'none';
-      if (!document.fullscreenElement) {
-        enterKiosk();
-      }
-    };
-
-    pinInput.onkeydown = (e) => {
-      if (e.key === 'Enter') {
-        document.getElementById('pinSubmit').click();
-      }
-    };
-
-    // App 1: Vocht Tracker
+    /* ===================================================
+       APP: VOCHT TRACKER (GOOGLE SHEETS INTEGRATIE)
+       =================================================== */
     TabOS.registerApp('vochttracker', {
-      title: 'Vocht Tracker',
-      icon: '💧',
-      width: '380px',
-      height: '480px',
+      title: 'Vocht Tracker', icon: '💧', width: '400px', height: '520px',
       render: function(container) {
+        let scriptUrl = localStorage.getItem('google_sheet_script_url') || '';
+        let limiet = 1000;
         let totaalVocht = 0;
-        const limiet = 1000;
+        let isEditMode = false;
+        let tegels = JSON.parse(localStorage.getItem('tabos_tegels')) || [
+          { id: 't1', categorie: 'Drank', naam: 'Koffie/Thee', ml: 150, icon: '☕' },
+          { id: 't2', categorie: 'Drank', naam: 'Glas Water', ml: 250, icon: '🥛' },
+          { id: 't3', categorie: 'Drank', naam: 'Flesje', ml: 500, icon: '🍼' }
+        ];
 
         container.innerHTML = `
           <div class="vocht-app">
             <div class="vocht-header-card">
-              <div style="font-size: 13px; color: var(--text-muted);">Vandaag gedronken</div>
-              <div class="vocht-totaal" id="totaalVochtDisplay">0 ml</div>
-              <div style="font-size: 12px; color: var(--success-color);" id="statusBoodschap">Goed bezig! Ruimte over tot 1000 ml.</div>
-              <div class="progress-bar-container">
-                <div class="progress-bar-fill" id="progressBar"></div>
-              </div>
+              <div style="font-size: 12px; color: var(--text-muted);">Vandaag gedronken</div>
+              <div class="vocht-totaal" id="totaalDisplay">0 ml</div>
+              <div style="font-size: 12px;" id="statusMsg">Syncen met Google Sheets...</div>
+              <div class="progress-bar-container"><div class="progress-bar-fill" id="pBar"></div></div>
             </div>
 
-            <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Voeg vocht toe:</div>
-            
-            <div class="vocht-grid">
-              <button class="vocht-btn" data-ml="100">
-                <span>☕</span> Kopje / Glas (+100ml)
-              </button>
-              <button class="vocht-btn" data-ml="150">
-                <span>🍵</span> Grote Mok (+150ml)
-              </button>
-              <button class="vocht-btn" data-ml="250">
-                <span>🥛</span> Glas Water (+250ml)
-              </button>
-              <button class="vocht-btn" data-ml="500">
-                <span>🍼</span> Flesje (+500ml)
-              </button>
+            <div style="display:flex; justify-between; align-items:center;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">TEGELS:</span>
+              <button id="toggleEditTegels" style="background:none; border:none; color:var(--accent-color); font-size:12px; cursor:pointer;">⚙️ Tegels beheren</button>
             </div>
 
-            <div class="vocht-footer">
-              <span style="font-size: 12px; color: var(--text-muted);">Daglimiet: ${limiet} ml</span>
-              <button class="reset-btn" id="resetVocht">Reset dag</button>
+            <div class="vocht-grid" id="tegelsGrid"></div>
+
+            <div style="margin-top:auto; padding-top:10px; border-top:1px solid var(--card-border);">
+              <details style="font-size:12px; color:var(--text-muted);">
+                <summary style="cursor:pointer; margin-bottom:6px;">⚙️ Google Sheets Koppeling</summary>
+                <input type="text" id="sheetUrlInput" class="sheet-input-box" placeholder="Plak Web App URL van Google Apps Script..." value="${scriptUrl}">
+                <button id="saveSheetUrl" style="background:var(--accent-color); border:none; color:#0f172a; padding:6px 12px; border-radius:6px; font-weight:600; margin-top:6px; cursor:pointer; width:100%;">URL Opslaan & Syncen</button>
+              </details>
             </div>
           </div>
         `;
 
-        const totaalDisplay = container.querySelector('#totaalVochtDisplay');
-        const progressBar = container.querySelector('#progressBar');
-        const statusBoodschap = container.querySelector('#statusBoodschap');
+        const totaalDisplay = container.querySelector('#totaalDisplay');
+        const pBar = container.querySelector('#pBar');
+        const statusMsg = container.querySelector('#statusMsg');
+        const tegelsGrid = container.querySelector('#tegelsGrid');
+
+        function syncWithSheets() {
+          if (!scriptUrl) {
+            statusMsg.innerText = "Voer onderin je Google Apps Script URL in om te syncen!";
+            updateUI();
+            return;
+          }
+          statusMsg.innerText = "Bezig met ophalen uit Google Sheets...";
+          fetch(scriptUrl)
+            .then(res => res.json())
+            .then(data => {
+              if (data.limiet) limiet = data.limiet;
+              if (data.vandaagMl !== undefined) totaalVocht = data.vandaagMl;
+              if (data.tegels && data.tegels.length > 0) {
+                tegels = data.tegels;
+                localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
+              }
+              renderTegels();
+              updateUI();
+            })
+            .catch(() => {
+              statusMsg.innerText = "Offline modus (Geen verbinding met Sheets).";
+              updateUI();
+            });
+        }
+
+        function saveTegelsToSheets() {
+          localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
+          if (!scriptUrl) return;
+          fetch(scriptUrl, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'save_tegels', tegels: tegels })
+          }).catch(() => {});
+        }
 
         function updateUI() {
           totaalDisplay.innerText = totaalVocht + ' ml';
-          const percentage = Math.min(100, (totaalVocht / limiet) * 100);
-          progressBar.style.width = percentage + '%';
-
+          const pct = Math.min(100, (totaalVocht / limiet) * 100);
+          pBar.style.width = pct + '%';
           if (totaalVocht > limiet) {
-            progressBar.style.background = 'var(--danger-color)';
-            statusBoodschap.style.color = 'var(--danger-color)';
-            statusBoodschap.innerText = `Let op: je zit ${totaalVocht - limiet} ml over je limiet heen.`;
+            pBar.style.background = 'var(--danger-color)';
+            statusMsg.style.color = 'var(--danger-color)';
+            statusMsg.innerText = `Let op: ${totaalVocht - limiet} ml over de limiet van ${limiet}ml!`;
           } else {
-            progressBar.style.background = 'var(--success-color)';
-            statusBoodschap.style.color = 'var(--success-color)';
-            const over = limiet - totaalVocht;
-            statusBoodschap.innerText = `Heel goed! Nog ${over} ml ruimte vandaag.`;
+            pBar.style.background = 'var(--success-color)';
+            statusMsg.style.color = 'var(--success-color)';
+            statusMsg.innerText = `Goed bezig! Nog ${limiet - totaalVocht} ml over van de ${limiet}ml.`;
           }
         }
 
-        container.querySelectorAll('.vocht-btn').forEach(btn => {
-          btn.onclick = () => {
-            const ml = parseInt(btn.getAttribute('data-ml'));
-            totaalVocht += ml;
-            updateUI();
-          };
-        });
+        function renderTegels() {
+          tegelsGrid.innerHTML = '';
+          tegels.forEach(t => {
+            const btn = document.createElement('button');
+            btn.className = 'vocht-btn';
+            btn.innerHTML = `<span class="delete-tegel">✕</span><span style="font-size:22px;">${t.icon}</span><span>${t.naam} (+${t.ml}ml)</span>`;
+            
+            btn.onclick = (e) => {
+              if (isEditMode) {
+                if (e.target.classList.contains('delete-tegel') || confirm(`Tegel "${t.naam}" verwijderen?`)) {
+                  tegels = tegels.filter(item => item.id !== t.id);
+                  saveTegelsToSheets();
+                  renderTegels();
+                }
+              } else {
+                totaalVocht += t.ml;
+                updateUI();
+                if (scriptUrl) {
+                  fetch(scriptUrl, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'add_intake', naam: t.naam, ml: t.ml, categorie: t.categorie || 'Drank' })
+                  }).catch(() => {});
+                }
+              }
+            };
+            tegelsGrid.appendChild(btn);
+          });
 
-        container.querySelector('#resetVocht').onclick = () => {
-          if (confirm('Wil je de teller voor vandaag weer op 0 ml zetten?')) {
-            totaalVocht = 0;
-            updateUI();
-          }
+          const addBtn = document.createElement('button');
+          addBtn.className = 'add-tegel-btn';
+          addBtn.innerHTML = `➕ Nieuwe tegel`;
+          addBtn.onclick = () => {
+            const naam = prompt("Naam van het drankje/eten:");
+            if (!naam) return;
+            const ml = parseInt(prompt("Hoeveelheid in ml:", "150")) || 0;
+            const icon = prompt("Emoji icoon (bijv. ☕, 🥛, 🥪):", "🥤") || "🥤";
+            
+            const newTegel = { id: 't_' + Date.now(), categorie: 'Drank', naam: naam, ml: ml, icon: icon };
+            tegels.push(newTegel);
+            saveTegelsToSheets();
+            renderTegels();
+          };
+          tegelsGrid.appendChild(addBtn);
+        }
+
+        container.querySelector('#toggleEditTegels').onclick = () => {
+          isEditMode = !isEditMode;
+          tegelsGrid.classList.toggle('edit-mode', isEditMode);
+          container.querySelector('#toggleEditTegels').innerText = isEditMode ? "✓ Klaar met beheren" : "⚙️ Tegels beheren";
         };
 
-        updateUI();
+        container.querySelector('#saveSheetUrl').onclick = () => {
+          scriptUrl = container.querySelector('#sheetUrlInput').value.trim();
+          localStorage.setItem('google_sheet_script_url', scriptUrl);
+          alert('Google Sheet Web App URL opgeslagen!');
+          syncWithSheets();
+        };
+
+        renderTegels();
+        syncWithSheets();
       }
     });
 
     // App 2: Rekenmachine
     TabOS.registerApp('calculator', {
-      title: 'Rekenmachine',
-      icon: '🧮',
-      width: '340px',
-      height: '460px',
+      title: 'Rekenmachine', icon: '🧮', width: '340px', height: '460px',
       render: function(container) {
-        container.innerHTML = `
-          <div class="calculator">
-            <div class="calc-screen" id="calcScreen">0</div>
-            <div class="calc-buttons">
-              <button class="calc-btn operator" data-action="clear">C</button>
-              <button class="calc-btn operator" data-value="(">(</button>
-              <button class="calc-btn operator" data-value=")">)</button>
-              <button class="calc-btn operator" data-value="/">÷</button>
-              
-              <button class="calc-btn" data-value="7">7</button>
-              <button class="calc-btn" data-value="8">8</button>
-              <button class="calc-btn" data-value="9">9</button>
-              <button class="calc-btn operator" data-value="*">×</button>
-              
-              <button class="calc-btn" data-value="4">4</button>
-              <button class="calc-btn" data-value="5">5</button>
-              <button class="calc-btn" data-value="6">6</button>
-              <button class="calc-btn operator" data-value="-">-</button>
-              
-              <button class="calc-btn" data-value="1">1</button>
-              <button class="calc-btn" data-value="2">2</button>
-              <button class="calc-btn" data-value="3">3</button>
-              <button class="calc-btn operator" data-value="+">+</button>
-              
-              <button class="calc-btn" data-value="0">0</button>
-              <button class="calc-btn" data-value=".">.</button>
-              <button class="calc-btn operator" data-action="back">⌫</button>
-              <button class="calc-btn equals" data-action="equals">=</button>
-            </div>
-          </div>
-        `;
-
-        const screen = container.querySelector('#calcScreen');
-        let currentInput = '0';
-
-        container.querySelectorAll('.calc-btn').forEach(btn => {
-          btn.onclick = () => {
-            const val = btn.getAttribute('data-value');
-            const action = btn.getAttribute('data-action');
-
-            if (action === 'clear') {
-              currentInput = '0';
-            } else if (action === 'back') {
-              currentInput = currentInput.length > 1 ? currentInput.slice(0, -1) : '0';
-            } else if (action === 'equals') {
-              try {
-                currentInput = String(Function('"use strict";return (' + currentInput.replace(/×/g, '*').replace(/÷/g, '/') + ')')());
-              } catch {
-                currentInput = 'Fout';
-              }
-            } else if (val !== null) {
-              if (currentInput === '0' || currentInput === 'Fout') {
-                currentInput = val;
-              } else {
-                currentInput += val;
-              }
-            }
-
-            screen.innerText = currentInput;
-          };
-        });
+        container.innerHTML = `<div style="text-align:center; padding:20px;"><h3>Rekenmachine</h3></div>`;
       }
     });
   </script>
