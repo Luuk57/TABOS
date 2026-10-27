@@ -3,13 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TabOS - Auto-Sync Edition</title>
+  <title>TabOS - Live Firebase Edition</title>
   
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#090d16">
+
+  <!-- Firebase SDK's -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <style>
     :root {
@@ -91,7 +95,6 @@
     
     .footer-actions { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 6px; border-top: 1px solid var(--card-border); }
     .reset-btn { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; }
-    .sheet-input-box { background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 6px; color: #fff; padding: 6px; width: 100%; font-size: 11px; margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -140,6 +143,20 @@
   </div>
 
   <script>
+    // Firebase Configuratie uit jouw gegevens[span_2](start_span)[span_2](end_span)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDOj-x4BV4J1rkZ21R29D5KknkTaswWvw",
+      authDomain: "tabos-vocht.firebaseapp.com",
+      databaseURL: "https://tabos-vocht-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "tabos-vocht",
+      storageBucket: "tabos-vocht.appspot.com",
+      messagingSenderId: "372380067963",
+      appId: "1:372380067963:web:8e57ae65aba2c2afb41ade"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     if ('serviceWorker' in navigator) {
       const swCode = `
         self.addEventListener('install', (e) => self.skipWaiting());
@@ -232,16 +249,16 @@
     document.getElementById('pinCancel').onclick = () => pinModal.style.display = 'none';
 
     /* ===================================================
-       APP: VOCHT TRACKER (STABIEL + ONGEMERKTE ACHTERGROND SYNC)
+       APP: VOCHT TRACKER (LIVE FIREBASE REAL-TIME SYNC)
        =================================================== */
     TabOS.registerApp('vochttracker', {
       title: 'Vocht Tracker', icon: '💧', width: '440px', height: '480px',
       render: function(container) {
-        let scriptUrl = localStorage.getItem('google_sheet_script_url') || '';
         const limiet = 1000;
-        
-        const vandaagKey = 'vocht_totaal_' + new Date().toISOString().slice(0,10);
-        let totaalVocht = parseInt(localStorage.getItem(vandaagKey)) || 0;
+        const vandaagDatum = new Date().toISOString().slice(0,10);
+        const dbRef = db.ref('vocht_' + vandaagDatum);
+
+        let totaalVocht = 0;
         let isEditMode = false;
         
         let tegels = JSON.parse(localStorage.getItem('tabos_tegels')) || [
@@ -254,9 +271,9 @@
         container.innerHTML = `
           <div class="vocht-app">
             <div class="vocht-header-card">
-              <div style="font-size: 11px; color: var(--text-muted);">Vandaag gedronken (Auto-Sync)</div>
-              <div class="vocht-totaal" id="totaalDisplay">${totaalVocht} ml</div>
-              <div style="font-size: 11px;" id="statusMsg">Actief op achtergrond</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Vandaag gedronken (Live Firebase Sync)</div>
+              <div class="vocht-totaal" id="totaalDisplay">0 ml</div>
+              <div style="font-size: 11px;" id="statusMsg">Verbinden met cloud...</div>
               <div class="progress-bar-container"><div class="progress-bar-fill" id="pBar"></div></div>
             </div>
 
@@ -269,11 +286,6 @@
 
             <div class="footer-actions">
               <button class="reset-btn" id="resetVocht">Reset dag</button>
-              <details style="font-size:11px; color:var(--text-muted); flex:1; margin-left:10px;">
-                <summary style="cursor:pointer; text-align:right;">⚙️ Sheets URL</summary>
-                <input type="text" id="sheetUrlInput" class="sheet-input-box" placeholder="Plak Web App URL..." value="${scriptUrl}">
-                <button id="saveSheetUrl" style="background:var(--accent-color); border:none; color:#0f172a; padding:4px 8px; border-radius:4px; font-weight:600; margin-top:4px; cursor:pointer; width:100%;">Opslaan</button>
-              </details>
             </div>
           </div>
         `;
@@ -285,7 +297,6 @@
 
         function updateUI() {
           totaalDisplay.innerText = totaalVocht + ' ml';
-          localStorage.setItem(vandaagKey, totaalVocht);
           const pct = Math.min(100, (totaalVocht / limiet) * 100);
           pBar.style.width = pct + '%';
           
@@ -300,20 +311,15 @@
           }
         }
 
-        // Achtergrond synchronisatie met Google Sheets
-        function backgroundSync() {
-          if (!scriptUrl) return;
-          fetch(scriptUrl)
-            .then(res => res.json())
-            .then(data => {
-              if (data.vandaagMl !== undefined && Number(data.vandaagMl) > totaalVocht) {
-                // Als Tab B meer heeft ingevoerd, neemt deze tablet ongemerkt de hoogste stand over
-                totaalVocht = Number(data.vandaagMl);
-                updateUI();
-              }
-            })
-            .catch(() => {});
-        }
+        // Luister direct en live mee met Firebase (zodra Tab A of Tab B iets wijzigt, past dit scherm direct aan!)
+        dbRef.child('totaal').on('value', (snapshot) => {
+          const val = snapshot.val();
+          totaalVocht = val !== null ? Number(val) : 0;
+          updateUI();
+          statusMsg.innerText = "Live gesynchroniseerd ✅";
+        }, (error) => {
+          statusMsg.innerText = "Offline modus (lokale cache)";
+        });
 
         function saveTegelsLocal() {
           localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
@@ -334,16 +340,12 @@
                   renderTegels();
                 }
               } else {
-                totaalVocht += t.ml;
-                updateUI();
-                
-                // Stuur onzichtbaar naar Google Sheet
-                if (scriptUrl) {
-                  fetch(scriptUrl, {
-                    method: 'POST',
-                    body: JSON.stringify({ action: 'add_intake', naam: t.naam, ml: t.ml, categorie: t.categorie || 'Drank' })
-                  }).catch(() => {});
-                }
+                // Tel direct op en stuur naar Firebase (Tab B ziet dit binnen een milliseconde verspringen!)
+                const nieuwTotaal = totaalVocht + t.ml;
+                dbRef.child('totaal').set(nieuwTotaal).catch(() => {
+                  totaalVocht = nieuwTotaal; // Fallback
+                  updateUI();
+                });
               }
             };
             tegelsGrid.appendChild(btn);
@@ -374,24 +376,11 @@
 
         container.querySelector('#resetVocht').onclick = () => {
           if (confirm('Wil je de teller voor vandaag weer op 0 ml zetten?')) {
-            totaalVocht = 0;
-            updateUI();
+            dbRef.child('totaal').set(0);
           }
         };
 
-        container.querySelector('#saveSheetUrl').onclick = () => {
-          scriptUrl = container.querySelector('#sheetUrlInput').value.trim();
-          localStorage.setItem('google_sheet_script_url', scriptUrl);
-          alert('Google Sheet URL opgeslagen!');
-          backgroundSync();
-        };
-
         renderTegels();
-        updateUI();
-        
-        // Controleer elke 10 seconden ongemerkt op de achtergrond of Tab B iets heeft toegevoegd
-        setInterval(backgroundSync, 10000);
-        backgroundSync();
       }
     });
 
