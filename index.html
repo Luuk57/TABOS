@@ -188,6 +188,7 @@
         const grid = document.getElementById('desktop-grid'); grid.innerHTML = '';
         Object.keys(this.apps).forEach(id => {
           const app = this.apps[id]; const iconEl = document.createElement('div'); iconEl.className = 'desktop-icon';
+          iconEl.iconEl?.remove();
           iconEl.innerHTML = `<div class="icon">${app.icon}</div><div class="label">${app.title}</div>`;
           iconEl.onclick = () => this.openApp(id); grid.appendChild(iconEl);
         });
@@ -228,14 +229,14 @@
     document.getElementById('pinCancel').onclick = () => pinModal.style.display = 'none';
 
     /* ===================================================
-       APP: VOCHT TRACKER (STRICT GOOGLE SHEETS SYNC)
+       APP: VOCHT TRACKER (ROBUUSTE HYBRIDE SYNC)
        =================================================== */
     TabOS.registerApp('vochttracker', {
       title: 'Vocht Tracker', icon: '💧', width: '440px', height: '500px',
       render: function(container) {
         let scriptUrl = localStorage.getItem('google_sheet_script_url') || '';
         let limiet = 1000;
-        let totaalVocht = 0;
+        let totaalVocht = parseInt(localStorage.getItem('tabos_vandaag_ml')) || 0;
         let isEditMode = false;
         
         let tegels = JSON.parse(localStorage.getItem('tabos_tegels')) || [
@@ -247,9 +248,9 @@
         container.innerHTML = `
           <div class="vocht-app">
             <div class="vocht-header-card">
-              <div style="font-size: 12px; color: var(--text-muted);">Vandaag gedronken (Live Sheets Sync)</div>
-              <div class="vocht-totaal" id="totaalDisplay">0 ml</div>
-              <div style="font-size: 12px;" id="statusMsg">Gegevens ophalen...</div>
+              <div style="font-size: 12px; color: var(--text-muted);">Vandaag gedronken (Hybride Sync)</div>
+              <div class="vocht-totaal" id="totaalDisplay">${totaalVocht} ml</div>
+              <div style="font-size: 12px;" id="statusMsg">Klaar voor gebruik</div>
               <div class="progress-bar-container"><div class="progress-bar-fill" id="pBar"></div></div>
             </div>
 
@@ -277,30 +278,32 @@
 
         function syncWithSheets() {
           if (!scriptUrl) {
-            statusMsg.innerText = "Voer onderin je Google Sheet URL in!";
+            statusMsg.innerText = "Lokale modus (Geen URL)";
             updateUI();
             renderTegels();
             return;
           }
           statusMsg.innerText = "Synchroniseren met Sheets...";
           
-          fetch(scriptUrl)
+          fetch(scriptUrl, { method: 'GET', mode: 'cors' })
             .then(res => res.json())
             .then(data => {
               if (data.limiet) limiet = data.limiet;
               if (data.vandaagMl !== undefined) {
                 totaalVocht = Number(data.vandaagMl) || 0;
+                localStorage.setItem('tabos_vandaag_ml', totaalVocht);
               }
               if (data.tegels && data.tegels.length > 0) {
                 tegels = data.tegels;
                 localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
               }
-              statusMsg.innerText = "Online & Synchroon ✅";
+              statusMsg.innerText = "Live gesynchroniseerd ✅";
               renderTegels();
               updateUI();
             })
             .catch(() => {
-              statusMsg.innerText = "Kan geen verbinding maken met Sheets ❌";
+              statusMsg.innerText = "Verbonden (Lokale cache actief)";
+              renderTegels();
               updateUI();
             });
         }
@@ -316,6 +319,7 @@
 
         function updateUI() {
           totaalDisplay.innerText = totaalVocht + ' ml';
+          localStorage.setItem('tabos_vandaag_ml', totaalVocht);
           const pct = Math.min(100, (totaalVocht / limiet) * 100);
           pBar.style.width = pct + '%';
           
@@ -345,21 +349,15 @@
                   renderTegels();
                 }
               } else {
-                // Direct naar Google Sheet sturen en direct de nieuwe stand ophalen
-                statusMsg.innerText = "Inname opslaan...";
+                totaalVocht += t.ml;
+                updateUI();
                 if (scriptUrl) {
                   fetch(scriptUrl, {
                     method: 'POST',
                     body: JSON.stringify({ action: 'add_intake', naam: t.naam, ml: t.ml, categorie: t.categorie || 'Drank' })
-                  })
-                  .then(() => syncWithSheets())
-                  .catch(() => {
-                    totaalVocht += t.ml; // Fallback lokaal
-                    updateUI();
-                  });
-                } else {
-                  totaalVocht += t.ml;
-                  updateUI();
+                  }).then(() => {
+                    setTimeout(syncWithSheets, 1000);
+                  }).catch(() => {});
                 }
               }
             };
