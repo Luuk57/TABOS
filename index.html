@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TabOS - Vocht Tracker Proggie</title>
+  <title>TabOS - Auto-Sync Edition</title>
   
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
@@ -73,7 +73,7 @@
     .pin-btn.cancel { background: rgba(255,255,255,0.1); color: #fff; }
     .pin-btn.submit { background: var(--accent-color); color: #0f172a; }
 
-    /* Vocht Tracker Proggie Stijlen (4 Kolommen) */
+    /* Vocht Tracker Stijlen (4 Kolommen) */
     .vocht-app { display: flex; flex-direction: column; gap: 12px; height: 100%; }
     .vocht-header-card { background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 12px; text-align: center; }
     .vocht-totaal { font-size: 30px; font-weight: 700; color: var(--accent-color); }
@@ -232,7 +232,7 @@
     document.getElementById('pinCancel').onclick = () => pinModal.style.display = 'none';
 
     /* ===================================================
-       APP: VOCHT TRACKER PROGGIE (STABIEL & 4 KOLOMMEN)
+       APP: VOCHT TRACKER (STABIEL + ONGEMERKTE ACHTERGROND SYNC)
        =================================================== */
     TabOS.registerApp('vochttracker', {
       title: 'Vocht Tracker', icon: '💧', width: '440px', height: '480px',
@@ -240,7 +240,6 @@
         let scriptUrl = localStorage.getItem('google_sheet_script_url') || '';
         const limiet = 1000;
         
-        // Unieke sleutel per dag zodat de teller elke dag netjes op 0 begint
         const vandaagKey = 'vocht_totaal_' + new Date().toISOString().slice(0,10);
         let totaalVocht = parseInt(localStorage.getItem(vandaagKey)) || 0;
         let isEditMode = false;
@@ -255,9 +254,9 @@
         container.innerHTML = `
           <div class="vocht-app">
             <div class="vocht-header-card">
-              <div style="font-size: 11px; color: var(--text-muted);">Vandaag gedronken (Limiet: ${limiet} ml)</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Vandaag gedronken (Auto-Sync)</div>
               <div class="vocht-totaal" id="totaalDisplay">${totaalVocht} ml</div>
-              <div style="font-size: 11px;" id="statusMsg">Actief & Stabiel</div>
+              <div style="font-size: 11px;" id="statusMsg">Actief op achtergrond</div>
               <div class="progress-bar-container"><div class="progress-bar-fill" id="pBar"></div></div>
             </div>
 
@@ -301,6 +300,21 @@
           }
         }
 
+        // Achtergrond synchronisatie met Google Sheets
+        function backgroundSync() {
+          if (!scriptUrl) return;
+          fetch(scriptUrl)
+            .then(res => res.json())
+            .then(data => {
+              if (data.vandaagMl !== undefined && Number(data.vandaagMl) > totaalVocht) {
+                // Als Tab B meer heeft ingevoerd, neemt deze tablet ongemerkt de hoogste stand over
+                totaalVocht = Number(data.vandaagMl);
+                updateUI();
+              }
+            })
+            .catch(() => {});
+        }
+
         function saveTegelsLocal() {
           localStorage.setItem('tabos_tegels', JSON.stringify(tegels));
         }
@@ -320,11 +334,10 @@
                   renderTegels();
                 }
               } else {
-                // Tel direct op op het scherm en sla veilig op
                 totaalVocht += t.ml;
                 updateUI();
                 
-                // Stuur onzichtbaar naar Google Sheet als logboekregel
+                // Stuur onzichtbaar naar Google Sheet
                 if (scriptUrl) {
                   fetch(scriptUrl, {
                     method: 'POST',
@@ -370,10 +383,15 @@
           scriptUrl = container.querySelector('#sheetUrlInput').value.trim();
           localStorage.setItem('google_sheet_script_url', scriptUrl);
           alert('Google Sheet URL opgeslagen!');
+          backgroundSync();
         };
 
         renderTegels();
         updateUI();
+        
+        // Controleer elke 10 seconden ongemerkt op de achtergrond of Tab B iets heeft toegevoegd
+        setInterval(backgroundSync, 10000);
+        backgroundSync();
       }
     });
 
